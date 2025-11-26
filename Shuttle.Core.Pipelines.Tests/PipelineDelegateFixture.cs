@@ -1,7 +1,5 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 
@@ -51,7 +49,7 @@ public class PipelineDelegateFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(serviceProvider);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), serviceProvider);
 
         pipeline
             .AddStage("Stage")
@@ -87,7 +85,7 @@ public class PipelineDelegateFixture
     [Test]
     public async Task Should_be_able_to_register_events_after_existing_event_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent3>()
@@ -104,7 +102,7 @@ public class PipelineDelegateFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -128,7 +126,7 @@ public class PipelineDelegateFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(serviceProvider);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), serviceProvider);
 
         pipeline
             .AddStage("Stage")

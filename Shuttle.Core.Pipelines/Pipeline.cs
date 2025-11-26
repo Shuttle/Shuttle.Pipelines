@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
@@ -11,6 +7,7 @@ namespace Shuttle.Core.Pipelines;
 
 public class Pipeline : IPipeline
 {
+    private readonly PipelineOptions _pipelineOptions;
     private static readonly Type PipelineObserverType = typeof(IPipelineObserver<>);
     private static readonly Type PipelineContextType = typeof(IPipelineContext<>);
 
@@ -32,10 +29,11 @@ public class Pipeline : IPipeline
 
     private bool _initialized;
 
-    protected List<IPipelineStage> Stages = new();
+    protected List<IPipelineStage> Stages = [];
 
-    public Pipeline(IServiceProvider serviceProvider)
+    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider)
     {
+        _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
         _serviceProvider = Guard.AgainstNull(serviceProvider);
 
         Id = Guid.NewGuid();
@@ -49,12 +47,6 @@ public class Pipeline : IPipeline
 
         Stages.Add(stage);
     }
-
-    public event EventHandler<PipelineEventArgs>? StageStarting;
-    public event EventHandler<PipelineEventArgs>? StageCompleted;
-    public event EventHandler<PipelineEventArgs>? PipelineStarting;
-    public event EventHandler<PipelineEventArgs>? PipelineCompleted;
-    public event EventHandler<PipelineEventArgs>? PipelineRecursiveException;
 
     public Guid Id { get; }
     public bool ExceptionHandled { get; internal set; }
@@ -118,7 +110,7 @@ public class Pipeline : IPipeline
 
     public IPipelineStage AddStage(string name)
     {
-        var stage = new PipelineStage(Guard.AgainstNullOrEmptyString(name));
+        var stage = new PipelineStage(Guard.AgainstEmpty(name));
 
         Stages.Add(stage);
 
@@ -127,7 +119,7 @@ public class Pipeline : IPipeline
 
     public IPipelineStage GetStage(string name)
     {
-        Guard.AgainstNullOrEmptyString(name);
+        Guard.AgainstEmpty(name);
 
         var result = Stages.Find(stage => stage.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
 
@@ -150,13 +142,13 @@ public class Pipeline : IPipeline
 
         CancellationToken = cancellationToken;
 
-        PipelineStarting?.Invoke(this, _pipelineEventArgs);
+        await _pipelineOptions.PipelineStarting.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
         foreach (var stage in Stages)
         {
             StageName = stage.Name;
 
-            StageStarting?.Invoke(this, _pipelineEventArgs);
+            await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
             foreach (var eventType in stage.Events)
             {
@@ -217,10 +209,10 @@ public class Pipeline : IPipeline
                 }
             }
 
-            StageCompleted?.Invoke(this, _pipelineEventArgs);
+            await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken);
         }
 
-        PipelineCompleted?.Invoke(this, _pipelineEventArgs);
+        await _pipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
         return true;
     }
@@ -311,12 +303,12 @@ public class Pipeline : IPipeline
                 {
                     if (eventType == _onPipelineExceptionType)
                     {
-                        if (PipelineRecursiveException == null)
+                        if (_pipelineOptions.PipelineRecursiveException.Count == 0)
                         {
                             throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
                         }
 
-                        PipelineRecursiveException?.Invoke(this, _pipelineEventArgs);
+                        await _pipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, CancellationToken);
                     }
                     else
                     {
@@ -350,12 +342,12 @@ public class Pipeline : IPipeline
                 {
                     if (eventType == _onPipelineExceptionType)
                     {
-                        if (PipelineRecursiveException == null)
+                        if (_pipelineOptions.PipelineRecursiveException.Count == 0)
                         {
                             throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
                         }
 
-                        PipelineRecursiveException?.Invoke(this, _pipelineEventArgs);
+                        await _pipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, CancellationToken);
                     }
                     else
                     {

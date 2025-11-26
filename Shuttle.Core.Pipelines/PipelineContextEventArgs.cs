@@ -1,14 +1,8 @@
-﻿using System;
-using Shuttle.Core.Contract;
+﻿using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineContextEventArgs : EventArgs
+public class PipelineContextEventArgs(IPipelineContext pipelineContext)
 {
-    public PipelineContextEventArgs(IPipelineContext pipelineContext)
-    {
-        PipelineContext = Guard.AgainstNull(pipelineContext);
-    }
-
-    public IPipelineContext PipelineContext { get; }
+    public IPipelineContext PipelineContext { get; } = Guard.AgainstNull(pipelineContext);
 }

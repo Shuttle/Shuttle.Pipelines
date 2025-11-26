@@ -1,5 +1,3 @@
-using System;
-
 namespace Shuttle.Core.Pipelines;
 
 internal interface IPipelineObserverProvider

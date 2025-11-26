@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
@@ -78,9 +76,10 @@ public class ReusableObjectPool<TReusableObject> : ReusableObjectPool, IDisposab
         lock (Lock)
         {
             var type = instance.GetType();
+
             if (!_pool.TryGetValue(type, out var reusableObjects))
             {
-                reusableObjects = new();
+                reusableObjects = [];
                 _pool.Add(type, reusableObjects);
             }
 

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shuttle.Core.Contract;
 
@@ -8,21 +6,33 @@ namespace Shuttle.Core.Pipelines;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddPipelineProcessing(this IServiceCollection services, Action<PipelineProcessingBuilder>? builder = null)
+    extension(IServiceCollection services)
     {
-        Guard.AgainstNull(services);
-
-        var pipelineProcessingBuilder = new PipelineProcessingBuilder(services);
-
-        builder?.Invoke(pipelineProcessingBuilder);
-
-        services.AddOptions<PipelineOptions>().Configure(options =>
+        public IServiceCollection AddPipelineProcessing(Action<PipelineProcessingBuilder>? builder = null)
         {
-            options.ReusePipelines = pipelineProcessingBuilder.Options.ReusePipelines;
-        });
+            Guard.AgainstNull(services);
 
-        services.TryAddSingleton<IPipelineFactory, PipelineFactory>();
+            var pipelineProcessingBuilder = new PipelineProcessingBuilder(services);
 
-        return services;
+            builder?.Invoke(pipelineProcessingBuilder);
+
+            services.AddOptions<PipelineOptions>().Configure(options =>
+            {
+                options.ReusePipelines = pipelineProcessingBuilder.Options.ReusePipelines;
+
+                options.PipelineCompleted = pipelineProcessingBuilder.Options.PipelineCompleted;
+                options.PipelineCreated = pipelineProcessingBuilder.Options.PipelineCreated;
+                options.PipelineObtained = pipelineProcessingBuilder.Options.PipelineObtained;
+                options.PipelineRecursiveException = pipelineProcessingBuilder.Options.PipelineRecursiveException;
+                options.PipelineReleased = pipelineProcessingBuilder.Options.PipelineReleased;
+                options.PipelineStarting = pipelineProcessingBuilder.Options.PipelineStarting;
+                options.StageCompleted = pipelineProcessingBuilder.Options.StageCompleted;
+                options.StageStarting = pipelineProcessingBuilder.Options.StageStarting;
+            });
+
+            services.TryAddSingleton<IPipelineFactory, PipelineFactory>();
+
+            return services;
+        }
     }
 }

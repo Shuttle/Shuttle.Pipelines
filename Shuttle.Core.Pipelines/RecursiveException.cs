@@ -1,10 +1,3 @@
-using System;
-
 namespace Shuttle.Core.Pipelines;
 
-public class RecursiveException : Exception
-{
-    public RecursiveException(string message, Exception exception) : base(message, exception)
-    {
-    }
-}
+public class RecursiveException(string message, Exception exception) : Exception(message, exception);

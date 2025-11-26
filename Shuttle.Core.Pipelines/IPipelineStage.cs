@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Shuttle.Core.Pipelines;
+﻿namespace Shuttle.Core.Pipelines;
 
 public interface IPipelineStage
 {

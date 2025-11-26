@@ -1,4 +1,3 @@
-using System;
 using System.Reflection.Emit;
 
 namespace Shuttle.Core.Pipelines;
@@ -15,21 +14,14 @@ internal class PipelineContextConstructorInvoker
     {
         _pipeline = pipeline;
 
-        var dynamicMethod = new DynamicMethod(string.Empty, typeof(object),
-            new[]
-            {
-                typeof(object)
-            }, PipelineContext.Module);
+        var dynamicMethod = new DynamicMethod(string.Empty, typeof(object), [typeof(object)], PipelineContext.Module);
 
         var il = dynamicMethod.GetILGenerator();
 
         il.Emit(OpCodes.Ldarg_0);
 
         var contextType = PipelineContext.MakeGenericType(eventType);
-        var constructorInfo = contextType.GetConstructor(new[]
-        {
-            _pipelineType
-        });
+        var constructorInfo = contextType.GetConstructor([_pipelineType]);
 
         if (constructorInfo == null)
         {

@@ -1,23 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineStage : IPipelineStage
+public class PipelineStage(string name) : IPipelineStage
 {
-    protected readonly List<Type> PipelineEvents = new();
+    private readonly List<Type> _pipelineEvents = [];
 
-    public PipelineStage(string name)
-    {
-        Name = Guard.AgainstNull(name);
-        Events = new ReadOnlyCollection<Type>(PipelineEvents);
-    }
+    public string Name { get; } = Guard.AgainstNull(name);
 
-    public string Name { get; }
-
-    public IEnumerable<Type> Events { get; }
+    public IEnumerable<Type> Events => new ReadOnlyCollection<Type>(_pipelineEvents);
 
     public IPipelineStage WithEvent<TEvent>() where TEvent : class
     {
@@ -28,12 +20,12 @@ public class PipelineStage : IPipelineStage
     {
         Guard.AgainstNull(eventType);
 
-        if (PipelineEvents.Contains(eventType))
+        if (_pipelineEvents.Contains(eventType))
         {
             throw new InvalidOperationException(string.Format(Resources.PipelineStageEventAlreadyRegisteredException, Name, eventType.FullName));
         }
 
-        PipelineEvents.Add(eventType);
+        _pipelineEvents.Add(eventType);
 
         return this;
     }
@@ -41,26 +33,20 @@ public class PipelineStage : IPipelineStage
     public IAddEventBefore BeforeEvent<TEvent>() where TEvent : class
     {
         var eventName = typeof(TEvent).FullName ?? throw new ApplicationException(string.Format(Reflection.Resources.TypeFullNameNullException, typeof(TEvent).Name));
-        var pipelineEvent = PipelineEvents.Find(e => (e.FullName ?? throw new ApplicationException(string.Format(Reflection.Resources.TypeFullNameNullException, typeof(TEvent).Name))).Equals(eventName));
+        var pipelineEvent = _pipelineEvents.Find(e => (e.FullName ?? throw new ApplicationException(string.Format(Reflection.Resources.TypeFullNameNullException, typeof(TEvent).Name))).Equals(eventName));
 
-        if (pipelineEvent == null)
-        {
-            throw new InvalidOperationException(string.Format(Resources.PipelineStageEventNotRegistered, Name, eventName));
-        }
-
-        return new AddEventBefore(this, PipelineEvents, pipelineEvent);
+        return pipelineEvent == null 
+            ? throw new InvalidOperationException(string.Format(Resources.PipelineStageEventNotRegistered, Name, eventName)) 
+            : new AddEventBefore(this, _pipelineEvents, pipelineEvent);
     }
 
     public IAddEventAfter AfterEvent<TEvent>() where TEvent : class
     {
         var eventName = typeof(TEvent).FullName;
-        var pipelineEvent = PipelineEvents.Find(e => (e.FullName ?? throw new ApplicationException(string.Format(Reflection.Resources.TypeFullNameNullException, typeof(TEvent).Name))).Equals(eventName));
+        var pipelineEvent = _pipelineEvents.Find(e => (e.FullName ?? throw new ApplicationException(string.Format(Reflection.Resources.TypeFullNameNullException, typeof(TEvent).Name))).Equals(eventName));
 
-        if (pipelineEvent == null)
-        {
-            throw new InvalidOperationException(string.Format(Resources.PipelineStageEventNotRegistered, Name, eventName));
-        }
-
-        return new AddEventAfter(this, PipelineEvents, pipelineEvent);
+        return pipelineEvent == null 
+            ? throw new InvalidOperationException(string.Format(Resources.PipelineStageEventNotRegistered, Name, eventName)) 
+            : new AddEventAfter(this, _pipelineEvents, pipelineEvent);
     }
 }

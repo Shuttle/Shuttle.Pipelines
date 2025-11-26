@@ -1,19 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-
-namespace Shuttle.Core.Pipelines.Tests;
+﻿namespace Shuttle.Core.Pipelines.Tests;
 
 public class AmbientDataService : IAmbientDataService
 {
-    private static AsyncLocal<AmbientData> _ambientData;
+    private readonly AsyncLocal<AmbientData> _ambientData = new();
 
     private readonly SemaphoreSlim _lock = new(1, 1);
-
-    public AmbientDataService()
-    {
-        _ambientData = new();
-    }
 
     public string Current
     {

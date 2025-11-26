@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Shuttle.Core.Pipelines.Tests;
+﻿namespace Shuttle.Core.Pipelines.Tests;
 
 public class InterfacedObserver : IInterfacedObserver
 {

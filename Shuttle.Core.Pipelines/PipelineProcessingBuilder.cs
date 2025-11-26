@@ -1,35 +1,25 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineProcessingBuilder
+public class PipelineProcessingBuilder(IServiceCollection services)
 {
-    public PipelineProcessingBuilder(IServiceCollection services)
-    {
-        Services = Guard.AgainstNull(services);
-    }
-
-    public IServiceCollection Services { get; }
+    public IServiceCollection Services { get; } = Guard.AgainstNull(services);
 
     public PipelineOptions Options
     {
-        get => _pipelineOptions;
-        set => _pipelineOptions = value ?? throw new ArgumentNullException(nameof(value));
-    }
-
-    private PipelineOptions _pipelineOptions = new();
+        get;
+        set => field = value ?? throw new ArgumentNullException(nameof(value));
+    } = new();
 
     public PipelineProcessingBuilder AddAssembly(Assembly assembly)
     {
         Guard.AgainstNull(assembly);
 
-        var reflectionService = new ReflectionService();
-
-        foreach (var type in reflectionService.GetTypesCastableToAsync<IPipeline>(assembly).GetAwaiter().GetResult())
+        foreach (var type in assembly.GetTypesCastableToAsync<IPipeline>().GetAwaiter().GetResult())
         {
             if (type.IsInterface || type.IsAbstract || Services.Contains(ServiceDescriptor.Transient(type, type)))
             {
@@ -39,7 +29,7 @@ public class PipelineProcessingBuilder
             Services.AddTransient(type, type);
         }
 
-        foreach (var type in reflectionService.GetTypesCastableToAsync<IPipelineObserver>(assembly).GetAwaiter().GetResult())
+        foreach (var type in assembly.GetTypesCastableToAsync<IPipelineObserver>().GetAwaiter().GetResult())
         {
             if (type.IsInterface || type.IsAbstract)
             {

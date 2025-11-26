@@ -1,7 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace Shuttle.Core.Pipelines;
 
 public interface IPipeline
@@ -19,13 +15,8 @@ public interface IPipeline
     IPipelineStage GetStage(string name);
     void MarkExceptionHandled();
 
-    event EventHandler<PipelineEventArgs> PipelineCompleted;
-    event EventHandler<PipelineEventArgs> PipelineStarting;
     IPipeline AddObserver(IPipelineObserver pipelineObserver);
     IPipeline AddObserver(Type observerType);
     IPipeline AddObserver(Delegate handler);
     IPipelineStage AddStage(string name);
-    event EventHandler<PipelineEventArgs> StageCompleted;
-    event EventHandler<PipelineEventArgs> StageStarting;
-    event EventHandler<PipelineEventArgs> PipelineRecursiveException;
 }

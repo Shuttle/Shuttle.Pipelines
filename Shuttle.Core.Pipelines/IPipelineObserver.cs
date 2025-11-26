@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace Shuttle.Core.Pipelines;
 
 public interface IPipelineObserver

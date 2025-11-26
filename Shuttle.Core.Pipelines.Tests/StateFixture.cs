@@ -21,7 +21,7 @@ public class StateFixture
 
         Assert.That(state.Contains<Item>(), Is.True);
         Assert.That(state.Get<Item>(), Is.Not.Null);
-        Assert.That(state.Get<Item>().Id, Is.EqualTo(item.Id));
+        Assert.That(state.Get<Item>()!.Id, Is.EqualTo(item.Id));
 
         state.Clear();
 
@@ -68,13 +68,13 @@ public class StateFixture
 
         Assert.That(state.Contains<Item>(), Is.True);
         Assert.That(state.Get<Item>(), Is.Not.Null);
-        Assert.That(state.Get<Item>().Id, Is.EqualTo(itemA.Id));
+        Assert.That(state.Get<Item>()!.Id, Is.EqualTo(itemA.Id));
 
         state.Replace(itemB);
 
         Assert.That(state.Contains<Item>(), Is.True);
         Assert.That(state.Get<Item>(), Is.Not.Null);
-        Assert.That(state.Get<Item>().Id, Is.EqualTo(itemB.Id));
+        Assert.That(state.Get<Item>()!.Id, Is.EqualTo(itemB.Id));
 
         state.Remove<Item>();
 

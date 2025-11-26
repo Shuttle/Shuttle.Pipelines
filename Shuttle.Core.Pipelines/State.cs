@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
@@ -27,7 +26,7 @@ public class State : IState
 
     public object? Get(string key)
     {
-        return _state.TryGetValue(Guard.AgainstNull(key), out var result) ? result : default;
+        return _state.TryGetValue(Guard.AgainstNull(key), out var result) ? result : null;
     }
 
     public bool Contains(string key)

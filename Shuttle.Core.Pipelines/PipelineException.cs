@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Shuttle.Core.Pipelines;
+﻿namespace Shuttle.Core.Pipelines;
 
 public class PipelineException : Exception
 {

@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Shuttle.Core.Pipelines.Tests;
+﻿namespace Shuttle.Core.Pipelines.Tests;
 
 public class AmbientData
 {
-    private readonly List<string> _values = new();
-    public string ActiveValue { get; private set; }
+    private readonly List<string> _values = [];
+    public string ActiveValue { get; private set; } = string.Empty;
     public IEnumerable<string> Values => _values.AsReadOnly();
 
     public void Activate(string value)

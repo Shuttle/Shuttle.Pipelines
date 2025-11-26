@@ -1,9 +1,10 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Moq;
+using NUnit.Framework;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Moq;
-using NUnit.Framework;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -19,7 +20,7 @@ public class PipelineObserverFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(serviceProvider);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), serviceProvider);
 
         pipeline
             .AddStage("Stage")
@@ -39,7 +40,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_execute_a_valid_pipeline_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline
             .AddStage("Stage")
@@ -59,7 +60,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_register_events_after_existing_event_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent3>()
@@ -78,7 +79,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -100,7 +101,7 @@ public class PipelineObserverFixture
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                new Pipeline(new Mock<IServiceProvider>().Object)
+                new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
                     .AddStage("Stage")
                     .AfterEvent<MockPipelineEvent1>()
                     .Add<MockPipelineEvent2>());
@@ -111,7 +112,7 @@ public class PipelineObserverFixture
     {
         Assert.Throws<InvalidOperationException>(
             () =>
-                new Pipeline(new Mock<IServiceProvider>().Object)
+                new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
                     .AddStage("Stage")
                     .BeforeEvent<MockPipelineEvent1>()
                     .Add<MockPipelineEvent2>());
@@ -120,7 +121,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_call_an_interfaced_observer_async()
     {
-        var pipeline = new Pipeline(new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -138,7 +139,7 @@ public class PipelineObserverFixture
     public void Should_be_able_to_use_scoped_ambient_context_state_async()
     {
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
@@ -152,7 +153,7 @@ public class PipelineObserverFixture
     public void Should_be_not_able_to_use_ambient_context_state_without_scope_async()
     {
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
