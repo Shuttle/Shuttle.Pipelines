@@ -41,7 +41,7 @@ public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IService
         return (TPipeline)pipeline;
     }
 
-    public async Task ReleasePipelineAsync(IPipeline pipeline, CancellationToken cancellationToken)
+    public async Task ReleasePipelineAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
     {
         if (!_pipelineOptions.ReusePipelines)
         {
