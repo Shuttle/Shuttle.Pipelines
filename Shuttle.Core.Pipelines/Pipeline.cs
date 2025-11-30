@@ -142,13 +142,13 @@ public class Pipeline : IPipeline
 
         CancellationToken = cancellationToken;
 
-        await _pipelineOptions.PipelineStarting.InvokeAsync(_pipelineEventArgs, cancellationToken);
+        await _pipelineOptions.PipelineStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
         foreach (var stage in Stages)
         {
             StageName = stage.Name;
 
-            await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken);
+            await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             foreach (var eventType in stage.Events)
             {
@@ -209,10 +209,10 @@ public class Pipeline : IPipeline
                 }
             }
 
-            await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken);
+            await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
         }
 
-        await _pipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken);
+        await _pipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
         return true;
     }

@@ -88,10 +88,7 @@ public class AmbientDataService : IAmbientDataService
 
     private AmbientData GetAmbientData()
     {
-        if (_ambientData.Value == null)
-        {
-            _ambientData.Value = new();
-        }
+        _ambientData.Value ??= new();
 
         return _ambientData.Value;
     }
