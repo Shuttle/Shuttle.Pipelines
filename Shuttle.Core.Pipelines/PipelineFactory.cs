@@ -7,9 +7,9 @@ namespace Shuttle.Core.Pipelines;
 public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider)
     : IPipelineFactory
 {
+    private readonly PipelineOptions _pipelineOptions = Guard.AgainstNull(pipelineOptions).Value;
     private readonly IServiceProvider _serviceProvider = Guard.AgainstNull(serviceProvider);
     private ReusableObjectPool<object> _pool = new();
-    private readonly PipelineOptions _pipelineOptions = Guard.AgainstNull(pipelineOptions).Value;
 
     public async Task<TPipeline> GetPipelineAsync<TPipeline>(CancellationToken cancellationToken = default) where TPipeline : IPipeline
     {

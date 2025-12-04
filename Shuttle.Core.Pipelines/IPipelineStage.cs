@@ -8,4 +8,3 @@ public interface IPipelineStage
     IAddEventBefore BeforeEvent<TEvent>() where TEvent : class;
     IPipelineStage WithEvent<TEvent>() where TEvent : class;
 }
-    

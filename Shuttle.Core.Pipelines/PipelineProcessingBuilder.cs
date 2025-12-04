@@ -7,13 +7,13 @@ namespace Shuttle.Core.Pipelines;
 
 public class PipelineProcessingBuilder(IServiceCollection services)
 {
-    public IServiceCollection Services { get; } = Guard.AgainstNull(services);
-
     public PipelineOptions Options
     {
         get;
         set => field = value ?? throw new ArgumentNullException(nameof(value));
     } = new();
+
+    public IServiceCollection Services { get; } = Guard.AgainstNull(services);
 
     public PipelineProcessingBuilder AddAssembly(Assembly assembly)
     {

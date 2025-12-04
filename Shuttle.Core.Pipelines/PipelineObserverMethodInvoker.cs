@@ -1,7 +1,5 @@
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Threading.Tasks;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
@@ -18,11 +16,12 @@ internal readonly struct PipelineObserverMethodInvoker
     {
         PipelineObserverProvider = Guard.AgainstNull(pipelineObserverProvider);
 
-        var dynamicMethod = new DynamicMethod(string.Empty, typeof(Task), new[] { typeof(object), typeof(object) }, PipelineContextType.Module);
+        var dynamicMethod = new DynamicMethod(string.Empty, typeof(Task), [typeof(object), typeof(object), typeof(CancellationToken)], PipelineContextType.Module);
 
         var il = dynamicMethod.GetILGenerator();
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Ldarg_2);
 
         il.EmitCall(OpCodes.Callvirt, methodInfo, null);
         il.Emit(OpCodes.Ret);
@@ -30,10 +29,10 @@ internal readonly struct PipelineObserverMethodInvoker
         _asyncInvoker = (AsyncInvokeHandler)dynamicMethod.CreateDelegate(typeof(AsyncInvokeHandler));
     }
 
-    public async Task InvokeAsync(object pipelineContext)
+    public async Task InvokeAsync(object pipelineContext, CancellationToken cancellationToken)
     {
-        await _asyncInvoker.Invoke(PipelineObserverProvider.GetObserverInstance(), pipelineContext);
+        await _asyncInvoker.Invoke(PipelineObserverProvider.GetObserverInstance(), pipelineContext, cancellationToken);
     }
 
-    private delegate Task AsyncInvokeHandler(object observer, object pipelineContext);
+    private delegate Task AsyncInvokeHandler(object observer, object pipelineContext, CancellationToken cancellationToken);
 }

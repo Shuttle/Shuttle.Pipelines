@@ -4,7 +4,7 @@ public class InterfacedObserver : IInterfacedObserver
 {
     public bool Called { get; private set; }
 
-    public async Task ExecuteAsync(IPipelineContext<MockPipelineEvent1> pipelineContext)
+    public async Task ExecuteAsync(IPipelineContext<MockPipelineEvent1> pipelineContext, CancellationToken cancellationToken = default)
     {
         Called = true;
 

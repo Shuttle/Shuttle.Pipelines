@@ -16,7 +16,7 @@ internal static class PipelineExtensions
     {
         pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> pipelineContext) =>
         {
-            CallSequence(pipelineContext,"1");
+            CallSequence(pipelineContext, "1");
 
             await Task.CompletedTask;
         });
@@ -136,7 +136,7 @@ public class PipelineDelegateFixture
 
         var callSequence = string.Empty;
 
-        pipeline.AddObserver(async (IPipelineContext< MockPipelineEvent1> _) =>
+        pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> _) =>
         {
             callSequence += "1";
             await Task.CompletedTask;

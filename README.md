@@ -146,7 +146,7 @@ In order for the pipeline to process the events we will have to define one or mo
             state.Replace("value", value);
         }
 
-        public async Task ExecuteAsync(OnAddCharacterA pipelineEvent)
+        public async Task ExecuteAsync(OnAddCharacterA pipelineEvent, CancellationToken cancellationToken = default)
         {
 			Execute(pipelineEvent);
 
@@ -163,7 +163,7 @@ In order for the pipeline to process the events we will have to define one or mo
             state.Replace("value", value);
         }
 
-        public async Task ExecuteAsync(OnAddCharacter pipelineEvent)
+        public async Task ExecuteAsync(OnAddCharacter pipelineEvent, CancellationToken cancellationToken = default)
         {
             Execute(pipelineEvent);
 

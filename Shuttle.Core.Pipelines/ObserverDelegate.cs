@@ -10,12 +10,13 @@ public class ObserverDelegate(Delegate handler, IEnumerable<Type> parameterTypes
     public Delegate Handler { get; } = handler;
     public bool HasParameters { get; } = parameterTypes.Any();
 
-    public object[] GetParameters(IServiceProvider serviceProvider, object pipelineContext)
+    public object[] GetParameters(IServiceProvider serviceProvider, object pipelineContext, CancellationToken cancellationToken)
     {
         return parameterTypes
-            .Select(parameterType => !parameterType.IsCastableTo(PipelineContextType)
-                ? serviceProvider.GetRequiredService(parameterType)
-                : pipelineContext
-            ).ToArray();
+            .Select(parameterType => parameterType == typeof(CancellationToken)
+                ? cancellationToken
+                : !parameterType.IsCastableTo(PipelineContextType)
+                    ? serviceProvider.GetRequiredService(parameterType)
+                    : pipelineContext).ToArray();
     }
 }

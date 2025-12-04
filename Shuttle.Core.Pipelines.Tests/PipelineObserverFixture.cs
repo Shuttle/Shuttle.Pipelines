@@ -2,9 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -99,23 +96,21 @@ public class PipelineObserverFixture
     [Test]
     public void Should_fail_on_attempt_to_register_events_after_non_existent_event()
     {
-        Assert.Throws<InvalidOperationException>(
-            () =>
-                new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
-                    .AddStage("Stage")
-                    .AfterEvent<MockPipelineEvent1>()
-                    .Add<MockPipelineEvent2>());
+        Assert.Throws<InvalidOperationException>(() =>
+            new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
+                .AddStage("Stage")
+                .AfterEvent<MockPipelineEvent1>()
+                .Add<MockPipelineEvent2>());
     }
 
     [Test]
     public void Should_fail_on_attempt_to_register_events_before_non_existent_event()
     {
-        Assert.Throws<InvalidOperationException>(
-            () =>
-                new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
-                    .AddStage("Stage")
-                    .BeforeEvent<MockPipelineEvent1>()
-                    .Add<MockPipelineEvent2>());
+        Assert.Throws<InvalidOperationException>(() =>
+            new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object)
+                .AddStage("Stage")
+                .BeforeEvent<MockPipelineEvent1>()
+                .Add<MockPipelineEvent2>());
     }
 
     [Test]
