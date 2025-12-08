@@ -180,4 +180,7 @@
     <value>[FATAL] : An exception occurred while raising the 'OnPipelineException' event.  Please ensure that exceptions do not bubble up in exception handlers.</value>
     <comment>0 = </comment>
   </data>
+  <data name="TransactionScopeAlreadyStartedException" xml:space="preserve">
+    <value>A transaction scope has already been started.</value>
+  </data>
 </root>

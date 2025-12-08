@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
+using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -49,7 +50,7 @@ public class PipelineDelegateFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), serviceProvider);
+        var pipeline = GetPipeline(serviceProvider);
 
         pipeline
             .AddStage("Stage")
@@ -82,10 +83,22 @@ public class PipelineDelegateFixture
         Assert.That(callSequence, Is.EqualTo("123"));
     }
 
+    private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
+    {
+        return new(new()
+        {
+            PipelineOptions = Options.Create(new PipelineOptions()),
+            ServiceProvider = serviceProvider ?? new Mock<IServiceProvider>().Object,
+            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
+            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
+            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
+        });
+    }
+
     [Test]
     public async Task Should_be_able_to_register_events_after_existing_event_async()
     {
-        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
+        var pipeline = GetPipeline();
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent3>()
@@ -102,7 +115,14 @@ public class PipelineDelegateFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), new Mock<IServiceProvider>().Object);
+        var pipeline = new Pipeline(new()
+        {
+            PipelineOptions = Options.Create(new PipelineOptions()),
+            ServiceProvider = new Mock<IServiceProvider>().Object,
+            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
+            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
+            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
+        });
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -126,7 +146,14 @@ public class PipelineDelegateFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(Options.Create(new PipelineOptions()), serviceProvider);
+        var pipeline = new Pipeline(new()
+        {
+            PipelineOptions = Options.Create(new PipelineOptions()),
+            ServiceProvider = serviceProvider,
+            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
+            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
+            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
+        });
 
         pipeline
             .AddStage("Stage")

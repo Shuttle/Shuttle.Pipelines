@@ -1,13 +1,10 @@
 ﻿namespace Shuttle.Core.Pipelines;
 
-public class OnAbortPipeline;
-
-public class OnExecutionCancelled;
-
-public class OnPipelineException;
-
-public class OnPipelineStarting;
-
-public class OnStageCompleted;
-
-public class OnStageStarting;
+public class AbortPipeline;
+public class CompleteTransactionScope;
+public class DisposeTransactionScope;
+public class ExecutionCancelled;
+public class PipelineFailed;
+public class PipelineStarting;
+public class StageCompleted;
+public class StageStarting;

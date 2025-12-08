@@ -13,4 +13,5 @@ public class PipelineOptions
     public bool ReusePipelines { get; set; } = true;
     public AsyncEvent<PipelineEventArgs> StageCompleted { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> StageStarting { get; set; } = new();
+    public AsyncEvent<TransactionScopeEventArgs> TransactionStarting { get; set; } = new();
 }

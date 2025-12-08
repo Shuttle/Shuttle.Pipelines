@@ -5,7 +5,7 @@ using Shuttle.Core.Reflection;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineProcessingBuilder(IServiceCollection services)
+public class PipelineBuilder(IServiceCollection services)
 {
     public PipelineOptions Options
     {
@@ -14,8 +14,16 @@ public class PipelineProcessingBuilder(IServiceCollection services)
     } = new();
 
     public IServiceCollection Services { get; } = Guard.AgainstNull(services);
+    public ITransactionScopeConfiguration TransactionScopeConfiguration { get; } = new TransactionScopeConfiguration();
 
-    public PipelineProcessingBuilder AddAssembly(Assembly assembly)
+    public PipelineBuilder AddTransactionScope(Type pipelineType, string stageName)
+    {
+        TransactionScopeConfiguration.Add(pipelineType, stageName);
+
+        return this;
+    }
+    
+    public PipelineBuilder AddAssembly(Assembly assembly)
     {
         Guard.AgainstNull(assembly);
 

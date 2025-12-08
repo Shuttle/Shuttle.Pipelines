@@ -8,11 +8,11 @@ public static class ServiceCollectionExtensions
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddPipelineProcessing(Action<PipelineProcessingBuilder>? builder = null)
+        public IServiceCollection AddPipelines(Action<PipelineBuilder>? builder = null)
         {
             Guard.AgainstNull(services);
 
-            var pipelineProcessingBuilder = new PipelineProcessingBuilder(services);
+            var pipelineProcessingBuilder = new PipelineBuilder(services);
 
             builder?.Invoke(pipelineProcessingBuilder);
 
@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
             });
 
             services.TryAddSingleton<IPipelineFactory, PipelineFactory>();
+            services.AddScoped<Pipeline.Context>();
 
             return services;
         }

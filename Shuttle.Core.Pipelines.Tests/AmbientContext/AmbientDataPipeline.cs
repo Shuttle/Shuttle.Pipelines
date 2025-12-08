@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.Options;
-
-namespace Shuttle.Core.Pipelines.Tests;
+﻿namespace Shuttle.Core.Pipelines.Tests;
 
 public class AmbientDataPipeline : Pipeline
 {
-    public AmbientDataPipeline(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider, IAmbientDataService ambientDataService)
-        : base(pipelineOptions, serviceProvider)
+    public AmbientDataPipeline(Context context, IAmbientDataService ambientDataService)
+        : base(context)
     {
         AddStage("Pipeline")
             .WithEvent<OnAddValue>()
