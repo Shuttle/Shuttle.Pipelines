@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
             });
 
             services.TryAddSingleton<IPipelineFactory, PipelineFactory>();
-            services.AddScoped<Pipeline.Context>();
+            services.AddSingleton<IPipelineDependencies, PipelineDependencies>();
 
             return services;
         }

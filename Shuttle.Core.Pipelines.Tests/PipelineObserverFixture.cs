@@ -9,16 +9,14 @@ namespace Shuttle.Core.Pipelines.Tests;
 [TestFixture]
 public class PipelineObserverFixture
 {
-    private static Pipeline.Context GetPipelineContext(ServiceProvider? serviceProvider = null)
+    private static IPipelineDependencies GetPipelineContext(ServiceProvider? serviceProvider = null)
     {
-        return new()
-        {
-            PipelineOptions = Options.Create(new PipelineOptions()),
-            ServiceProvider = serviceProvider ?? new Mock<IServiceProvider>().Object,
-            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
-            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
-            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
-        };
+        return new PipelineDependencies(
+            Options.Create(new PipelineOptions()),
+            Options.Create(new TransactionScopeOptions()),
+            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
+            serviceProvider ?? new Mock<IServiceProvider>().Object
+        );
     }
 
     [Test]
@@ -30,14 +28,12 @@ public class PipelineObserverFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(new()
-        {
-            PipelineOptions = Options.Create(new PipelineOptions()),
-            ServiceProvider = serviceProvider,
-            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
-            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
-            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
-        });
+        var pipeline = new Pipeline(new PipelineDependencies(
+            Options.Create(new PipelineOptions()),
+            Options.Create(new TransactionScopeOptions()),
+            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
+            serviceProvider
+        ));
 
         pipeline
             .AddStage("Stage")

@@ -2,13 +2,13 @@
 
 namespace Shuttle.Core.Pipelines;
 
-public static class PipelineBuilderExtensions
+public static class PipelineOptionsExtensions
 {
-    extension(PipelineBuilder builder)
+    extension(PipelineOptions builder)
     {
-        public PipelineBuilder AddTransactionScope<TPipeline>(string stageName) where TPipeline : IPipeline
+        public PipelineOptions UseTransactionScope<TPipeline>(string stageName) where TPipeline : IPipeline
         {
-            return Guard.AgainstNull(builder).AddTransactionScope(typeof(TPipeline), Guard.AgainstEmpty(stageName));
+            return Guard.AgainstNull(builder).UseTransactionScope(typeof(TPipeline), Guard.AgainstEmpty(stageName));
         }
     }
 }

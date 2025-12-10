@@ -14,15 +14,7 @@ public class PipelineBuilder(IServiceCollection services)
     } = new();
 
     public IServiceCollection Services { get; } = Guard.AgainstNull(services);
-    public ITransactionScopeConfiguration TransactionScopeConfiguration { get; } = new TransactionScopeConfiguration();
 
-    public PipelineBuilder AddTransactionScope(Type pipelineType, string stageName)
-    {
-        TransactionScopeConfiguration.Add(pipelineType, stageName);
-
-        return this;
-    }
-    
     public PipelineBuilder AddAssembly(Assembly assembly)
     {
         Guard.AgainstNull(assembly);

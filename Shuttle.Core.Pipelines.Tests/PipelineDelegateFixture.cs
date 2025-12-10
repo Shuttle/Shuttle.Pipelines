@@ -85,14 +85,12 @@ public class PipelineDelegateFixture
 
     private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
     {
-        return new(new()
-        {
-            PipelineOptions = Options.Create(new PipelineOptions()),
-            ServiceProvider = serviceProvider ?? new Mock<IServiceProvider>().Object,
-            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
-            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
-            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
-        });
+        return new(new PipelineDependencies(
+            Options.Create(new PipelineOptions()),
+            Options.Create(new TransactionScopeOptions()),
+            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
+            serviceProvider ?? new Mock<IServiceProvider>().Object
+        ));
     }
 
     [Test]
@@ -115,14 +113,12 @@ public class PipelineDelegateFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(new()
-        {
-            PipelineOptions = Options.Create(new PipelineOptions()),
-            ServiceProvider = new Mock<IServiceProvider>().Object,
-            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
-            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
-            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
-        });
+        var pipeline = new Pipeline(new PipelineDependencies(
+            Options.Create(new PipelineOptions()),
+            Options.Create(new TransactionScopeOptions()),
+            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
+            new Mock<IServiceProvider>().Object
+        ));
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -146,14 +142,12 @@ public class PipelineDelegateFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(new()
-        {
-            PipelineOptions = Options.Create(new PipelineOptions()),
-            ServiceProvider = serviceProvider,
-            TransactionScopeOptions = Options.Create(new TransactionScopeOptions()),
-            TransactionScopeConfiguration = new TransactionScopeConfiguration(),
-            TransactionScopeFactory = new TransactionScopeFactory(Options.Create(new TransactionScopeOptions()))
-        });
+        var pipeline = new Pipeline(new PipelineDependencies(
+            Options.Create(new PipelineOptions()),
+            Options.Create(new TransactionScopeOptions()),
+            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
+            serviceProvider 
+        ));
 
         pipeline
             .AddStage("Stage")

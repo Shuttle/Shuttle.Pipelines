@@ -2,8 +2,8 @@
 
 public class AmbientDataPipeline : Pipeline
 {
-    public AmbientDataPipeline(Context context, IAmbientDataService ambientDataService)
-        : base(context)
+    public AmbientDataPipeline(IPipelineDependencies pipelineDependencies, IAmbientDataService ambientDataService)
+        : base(pipelineDependencies)
     {
         AddStage("Pipeline")
             .WithEvent<OnAddValue>()
