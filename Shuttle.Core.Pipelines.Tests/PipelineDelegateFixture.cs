@@ -15,7 +15,7 @@ internal static class PipelineExtensions
 
     public static void MapObservers(this Pipeline pipeline)
     {
-        pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> pipelineContext) =>
+        pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> pipelineContext, CancellationToken cancellationToken) =>
         {
             CallSequence(pipelineContext, "1");
 

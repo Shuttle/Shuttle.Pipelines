@@ -5,7 +5,7 @@ namespace Shuttle.Core.Pipelines;
 
 public class PipelineOptions
 {
-    private readonly Dictionary<Type, List<string>> _pipelineStageName = new();
+    internal Dictionary<Type, List<string>> TransactionScopePipelineStageName = new();
 
     public AsyncEvent<PipelineEventArgs> PipelineCompleted { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> PipelineCreated { get; set; } = new();
@@ -16,21 +16,25 @@ public class PipelineOptions
     public bool ReusePipelines { get; set; } = true;
     public AsyncEvent<PipelineEventArgs> StageCompleted { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> StageStarting { get; set; } = new();
+    public AsyncEvent<PipelineEventArgs> EventCompleted { get; set; } = new();
+    public AsyncEvent<PipelineEventArgs> EventStarting { get; set; } = new();
+    public AsyncEvent<PipelineOptimizationEventArgs> Optimized { get; set; } = new();
     public AsyncEvent<TransactionScopeEventArgs> TransactionScopeStarting { get; set; } = new();
+    public bool OptimizePipelines { get; set; } = true;
 
     public PipelineOptions UseTransactionScope(Type pipelineType, string stageName)
     {
         Guard.AgainstNull(pipelineType);
         Guard.AgainstEmpty(stageName);
 
-        if (!_pipelineStageName.ContainsKey(pipelineType))
+        if (!TransactionScopePipelineStageName.ContainsKey(pipelineType))
         {
-            _pipelineStageName[pipelineType] = [];
+            TransactionScopePipelineStageName[pipelineType] = [];
         }
 
-        if (!_pipelineStageName[pipelineType].Contains(stageName))
+        if (!TransactionScopePipelineStageName[pipelineType].Contains(stageName))
         {
-            _pipelineStageName[pipelineType].Add(stageName);
+            TransactionScopePipelineStageName[pipelineType].Add(stageName);
         }
 
         return this;
@@ -41,6 +45,6 @@ public class PipelineOptions
         Guard.AgainstNull(pipelineType);
         Guard.AgainstEmpty(stageName);
 
-        return _pipelineStageName.TryGetValue(pipelineType, out var value) && value.Contains(stageName);
+        return TransactionScopePipelineStageName.TryGetValue(pipelineType, out var value) && value.Contains(stageName);
     }
 }

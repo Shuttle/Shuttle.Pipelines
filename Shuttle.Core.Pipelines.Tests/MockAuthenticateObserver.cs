@@ -9,21 +9,21 @@ public class MockAuthenticateObserver :
 
     public async Task ExecuteAsync(IPipelineContext<MockPipelineEvent1> pipelineContext, CancellationToken cancellationToken = default)
     {
-        Execute(pipelineContext.EventType, 1);
+        Execute(pipelineContext.Pipeline.EventType!, 1);
 
         await Task.CompletedTask;
     }
 
     public async Task ExecuteAsync(IPipelineContext<MockPipelineEvent2> pipelineContext, CancellationToken cancellationToken = default)
     {
-        Execute(pipelineContext.EventType, 2);
+        Execute(pipelineContext.Pipeline.EventType!, 2);
 
         await Task.CompletedTask;
     }
 
     public async Task ExecuteAsync(IPipelineContext<MockPipelineEvent3> pipelineContext, CancellationToken cancellationToken = default)
     {
-        Execute(pipelineContext.EventType, 3);
+        Execute(pipelineContext.Pipeline.EventType!, 3);
 
         await Task.CompletedTask;
     }

@@ -12,8 +12,8 @@ public class Pipeline : IPipeline
     private static readonly Type PipelineObserverType = typeof(IPipelineObserver<>);
     private static readonly Type PipelineContextType = typeof(IPipelineContext<>);
 
-    private readonly Dictionary<Type, List<ObserverDelegate>> _delegates = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly Dictionary<Type, List<ObserverDelegate>> _delegates = new();
     private readonly Dictionary<Type, List<PipelineObserverMethodInvoker>> _observerMethodInvokers = new();
 
     private readonly Type _abortPipelineType = typeof(AbortPipeline);
@@ -21,15 +21,13 @@ public class Pipeline : IPipeline
     private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
     private readonly Type _executionCancelledType = typeof(ExecutionCancelled);
     private readonly Type _pipelineExceptionType = typeof(PipelineFailed);
-    private readonly Type _stageCompletedType = typeof(StageCompleted);
-    private readonly Type _stageStartingType = typeof(StageStarting);
     private readonly Dictionary<Type, PipelineContextConstructorInvoker> _pipelineContextConstructors = new();
 
     private readonly PipelineEventArgs _pipelineEventArgs;
 
     private readonly string _raisingPipelineEvent = Resources.VerboseRaisingPipelineEvent;
 
-    private bool _initialized;
+    private bool _optimized;
     private ITransactionScope? _transactionScope;
 
     protected List<IPipelineStage> Stages = [];
@@ -42,19 +40,14 @@ public class Pipeline : IPipeline
         State = new State();
 
         _pipelineEventArgs = new(this);
-
-        var stage = new PipelineStage("__PipelineEntry");
-
-        stage.WithEvent<PipelineStarting>();
-
-        Stages.Add(stage);
     }
 
     public Guid Id { get; }
     public bool ExceptionHandled { get; internal set; }
     public Exception? Exception { get; internal set; }
     public bool Aborted { get; internal set; }
-    public string StageName { get; private set; } = "__PipelineEntry";
+    public string StageName { get; private set; } = string.Empty;
+    public Type? EventType { get; private set; }
 
     public IState State { get; }
 
@@ -68,7 +61,7 @@ public class Pipeline : IPipeline
         return AddObserver(new ServiceProviderPipelineObserverProvider(_pipelineDependencies.ServiceProvider, Guard.AgainstNull(observerType)));
     }
 
-    public IPipeline AddObserver(Delegate handler)
+    public IPipeline AddObserver<TDelegate>(TDelegate handler) where TDelegate : Delegate
     {
         if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
         {
@@ -131,11 +124,11 @@ public class Pipeline : IPipeline
 
     public virtual async Task<bool> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (!_initialized)
+        if (!_optimized)
         {
-            Initialize();
+            await OptimizeAsync(cancellationToken);
 
-            _initialized = true;
+            _optimized = true;
         }
 
         Aborted = false;
@@ -147,28 +140,50 @@ public class Pipeline : IPipeline
         {
             StageName = stage.Name;
 
-            await StartTransactionScopeAsync(cancellationToken);
+            // This cannot be async as the transaction scope will not be created as a root context.
+            if (_pipelineDependencies.PipelineOptions.RequiresTransactionScope(GetType(), StageName))
+            {
+                if (_transactionScope != null)
+                {
+                    throw new PipelineException(Resources.TransactionScopeAlreadyStartedException);
+                }
+
+                var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _pipelineDependencies.TransactionScopeOptions.IsolationLevel, _pipelineDependencies.TransactionScopeOptions.Timeout);
+
+                await _pipelineDependencies.PipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
+
+                _transactionScope = _pipelineDependencies.TransactionScopeFactory.Create(transactionScopeEventArgs.IsolationLevel, transactionScopeEventArgs.Timeout);
+
+                State.SetTransactionScope(_transactionScope);
+            }
 
             await _pipelineDependencies.PipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
             
             foreach (var eventType in stage.Events)
             {
+                EventType = eventType;
+
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (eventType == _completeTransactionScopeType)
                     {
+                        await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
+
                         _transactionScope?.Complete();
-                        _transactionScope = null;
                         State.Remove("TransactionScope");
+
+                        await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
                         continue;
                     }
 
                     if (eventType == _disposeTransactionScopeType)
                     {
+                        await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
                         await DisposeTransactionScopeAsync();
+                        await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
                         continue;
                     }
@@ -238,10 +253,14 @@ public class Pipeline : IPipeline
                 }
             }
 
+            EventType = null;
+
             await _pipelineDependencies.PipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             await DisposeTransactionScopeAsync();
         }
+
+        StageName = string.Empty;
 
         await _pipelineDependencies.PipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
@@ -253,25 +272,6 @@ public class Pipeline : IPipeline
         await (_transactionScope?.TryDisposeAsync() ?? Task.CompletedTask);
         _transactionScope = null;
         State.Remove("TransactionScope");
-    }
-
-    private async Task StartTransactionScopeAsync(CancellationToken cancellationToken)
-    {
-        if (_pipelineDependencies.PipelineOptions.RequiresTransactionScope(GetType(), StageName))
-        {
-            if (_transactionScope != null)
-            {
-                throw new PipelineException(Resources.TransactionScopeAlreadyStartedException);
-            }
-
-            var transactionScopeEventArgs = new TransactionScopeEventArgs(this, StageName, _pipelineDependencies.TransactionScopeOptions.IsolationLevel, _pipelineDependencies.TransactionScopeOptions.Timeout);
-
-            await _pipelineDependencies.PipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
-
-            _transactionScope = _pipelineDependencies.TransactionScopeFactory.Create(transactionScopeEventArgs.IsolationLevel, transactionScopeEventArgs.Timeout);
-
-            State.SetTransactionScope(_transactionScope);
-        }
     }
 
     private IPipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider)
@@ -305,31 +305,35 @@ public class Pipeline : IPipeline
 
     private bool HandlesType(Type type)
     {
-        return _observerMethodInvokers.ContainsKey(type) || _delegates.ContainsKey(type);
+        return _observerMethodInvokers.ContainsKey(type) || _delegates.ContainsKey(type) || type == _completeTransactionScopeType || type == _disposeTransactionScopeType;
     }
 
-    private void Initialize()
+    private async Task OptimizeAsync(CancellationToken cancellationToken)
     {
+        if (!_pipelineDependencies.PipelineOptions.OptimizePipelines)
+        {
+            return;
+        }
+
         var optimizedStages = new List<IPipelineStage>();
 
         foreach (var stage in Stages)
         {
             var events = new List<Type>();
 
-            if (HandlesType(_stageStartingType))
+            foreach (var @event in stage.Events)
             {
-                events.Add(_stageStartingType);
-            }
-
-            events.AddRange(stage.Events.Where(HandlesType));
-
-            if (HandlesType(_stageCompletedType))
-            {
-                events.Add(_stageCompletedType);
+                if (!HandlesType(@event))
+                {
+                    await _pipelineDependencies.PipelineOptions.Optimized.InvokeAsync(new(this, $"removed event = '{@event.FullName}' / stage = '{stage.Name}'"), cancellationToken);
+                    continue;
+                }
+                events.Add(@event);
             }
 
             if (!events.Any())
             {
+                await _pipelineDependencies.PipelineOptions.Optimized.InvokeAsync(new(this, $"removed stage = '{stage.Name}' (no events)"), cancellationToken);
                 continue;
             }
 
@@ -359,95 +363,104 @@ public class Pipeline : IPipeline
             return;
         }
 
-        PipelineContextConstructorInvoker? pipelineContextConstructor;
-
-        await _lock.WaitAsync(cancellationToken);
-
         try
         {
-            if (!_pipelineContextConstructors.TryGetValue(eventType, out pipelineContextConstructor))
-            {
-                pipelineContextConstructor = new(this, eventType);
+            await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
-                _pipelineContextConstructors.Add(eventType, pipelineContextConstructor);
+            PipelineContextConstructorInvoker? pipelineContextConstructor;
+
+            await _lock.WaitAsync(cancellationToken);
+
+            try
+            {
+                if (!_pipelineContextConstructors.TryGetValue(eventType, out pipelineContextConstructor))
+                {
+                    pipelineContextConstructor = new(this, eventType);
+
+                    _pipelineContextConstructors.Add(eventType, pipelineContextConstructor);
+                }
+            }
+            finally
+            {
+                _lock.Release();
+            }
+
+            var pipelineContext = pipelineContextConstructor.Create();
+
+            if (hasObservers)
+            {
+                foreach (var observer in observersForEvent!)
+                {
+                    try
+                    {
+                        await observer.InvokeAsync(pipelineContext, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (eventType == _pipelineExceptionType)
+                        {
+                            if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
+                            {
+                                throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
+                            }
+
+                            await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
+                        }
+                        else
+                        {
+                            throw new PipelineException(string.Format(_raisingPipelineEvent, eventType.FullName, StageName, observer.PipelineObserverProvider.GetType().FullName), ex);
+                        }
+                    }
+
+                    if (Aborted && !ignoreAbort)
+                    {
+                        return;
+                    }
+                }
+            }
+
+            if (hasDelegates)
+            {
+                foreach (var observerDelegate in delegatesForEvent!)
+                {
+                    try
+                    {
+                        if (observerDelegate.HasParameters)
+                        {
+                            await (Task)observerDelegate.Handler.DynamicInvoke(observerDelegate.GetParameters(_pipelineDependencies.ServiceProvider, pipelineContext, cancellationToken))!;
+                        }
+                        else
+                        {
+                            await (Task)observerDelegate.Handler.DynamicInvoke()!;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (eventType == _pipelineExceptionType)
+                        {
+                            if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
+                            {
+                                throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
+                            }
+
+                            await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
+                        }
+                        else
+                        {
+                            throw new PipelineException(string.Format(_raisingPipelineEvent, eventType.FullName, StageName, observerDelegate.GetType().FullName), ex);
+                        }
+                    }
+
+                    if (Aborted && !ignoreAbort)
+                    {
+                        return;
+                    }
+                }
             }
         }
         finally
         {
-            _lock.Release();
-        }
-
-        var pipelineContext = pipelineContextConstructor.Create();
-
-        if (hasObservers)
-        {
-            foreach (var observer in observersForEvent!)
-            {
-                try
-                {
-                    await observer.InvokeAsync(pipelineContext, cancellationToken).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    if (eventType == _pipelineExceptionType)
-                    {
-                        if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
-                        {
-                            throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
-                        }
-
-                        await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
-                    }
-                    else
-                    {
-                        throw new PipelineException(string.Format(_raisingPipelineEvent, eventType.FullName, StageName, observer.PipelineObserverProvider.GetType().FullName), ex);
-                    }
-                }
-
-                if (Aborted && !ignoreAbort)
-                {
-                    return;
-                }
-            }
-        }
-
-        if (hasDelegates)
-        {
-            foreach (var observerDelegate in delegatesForEvent!)
-            {
-                try
-                {
-                    if (observerDelegate.HasParameters)
-                    {
-                        await (Task)observerDelegate.Handler.DynamicInvoke(observerDelegate.GetParameters(_pipelineDependencies.ServiceProvider, pipelineContext, cancellationToken))!;
-                    }
-                    else
-                    {
-                        await (Task)observerDelegate.Handler.DynamicInvoke()!;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (eventType == _pipelineExceptionType)
-                    {
-                        if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
-                        {
-                            throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
-                        }
-
-                        await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
-                    }
-                    else
-                    {
-                        throw new PipelineException(string.Format(_raisingPipelineEvent, eventType.FullName, StageName, observerDelegate.GetType().FullName), ex);
-                    }
-                }
-
-                if (Aborted && !ignoreAbort)
-                {
-                    return;
-                }
-            }
+            await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
         }
     }
 }

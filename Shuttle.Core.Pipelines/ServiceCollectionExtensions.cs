@@ -28,6 +28,8 @@ public static class ServiceCollectionExtensions
                 options.PipelineStarting = pipelineProcessingBuilder.Options.PipelineStarting;
                 options.StageCompleted = pipelineProcessingBuilder.Options.StageCompleted;
                 options.StageStarting = pipelineProcessingBuilder.Options.StageStarting;
+
+                options.TransactionScopePipelineStageName = pipelineProcessingBuilder.Options.TransactionScopePipelineStageName;
             });
 
             services.TryAddSingleton<IPipelineFactory, PipelineFactory>();

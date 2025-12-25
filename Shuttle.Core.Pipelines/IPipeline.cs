@@ -8,12 +8,13 @@ public interface IPipeline
 
     Guid Id { get; }
     string StageName { get; }
+    Type? EventType { get; }
     IState State { get; }
     void Abort();
 
     IPipeline AddObserver(IPipelineObserver pipelineObserver);
     IPipeline AddObserver(Type observerType);
-    IPipeline AddObserver(Delegate handler);
+    IPipeline AddObserver<TDelegate>(TDelegate handler) where TDelegate : Delegate;
     IPipelineStage AddStage(string name);
     Task<bool> ExecuteAsync(CancellationToken cancellationToken = default);
     IPipelineStage GetStage(string name);
