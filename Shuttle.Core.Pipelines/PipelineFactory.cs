@@ -4,61 +4,22 @@ using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider)
-    : IPipelineFactory
+public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider) : IPipelineFactory
 {
     private readonly PipelineOptions _pipelineOptions = Guard.AgainstNull(pipelineOptions).Value;
     private readonly IServiceProvider _serviceProvider = Guard.AgainstNull(serviceProvider);
-    private ReusableObjectPool<object> _pool = new();
 
     public async Task<TPipeline> GetPipelineAsync<TPipeline>(CancellationToken cancellationToken = default) where TPipeline : IPipeline
     {
-        var pipeline = _pool.Get(typeof(TPipeline));
+        var pipeline = _serviceProvider.GetRequiredService<TPipeline>();
 
         if (pipeline == null)
         {
-            var type = typeof(TPipeline);
-
-            pipeline = (TPipeline)_serviceProvider.GetRequiredService(type);
-
-            if (pipeline == null)
-            {
-                throw new InvalidOperationException(string.Format(Resources.NullPipelineException, type.FullName));
-            }
-
-            if (_pool.Contains(pipeline))
-            {
-                throw new InvalidOperationException(string.Format(Resources.DuplicatePipelineInstanceException, type.FullName));
-            }
-
-            await _pipelineOptions.PipelineCreated.InvokeAsync(new((TPipeline)pipeline), cancellationToken);
-        }
-        else
-        {
-            await _pipelineOptions.PipelineObtained.InvokeAsync(new((TPipeline)pipeline), cancellationToken);
+            throw new InvalidOperationException(string.Format(Resources.NullPipelineException, typeof(TPipeline).FullName));
         }
 
-        return (TPipeline)pipeline;
-    }
+        await _pipelineOptions.PipelineCreated.InvokeAsync(new(pipeline), cancellationToken);
 
-    public async Task ReleasePipelineAsync(IPipeline pipeline, CancellationToken cancellationToken = default)
-    {
-        if (!_pipelineOptions.ReusePipelines)
-        {
-            return;
-        }
-
-        Guard.AgainstNull(pipeline);
-
-        _pool.Release(pipeline);
-
-        await _pipelineOptions.PipelineReleased.InvokeAsync(new(pipeline), cancellationToken);
-    }
-
-    public void Flush()
-    {
-        _pool.Dispose();
-
-        _pool = new();
+        return pipeline;
     }
 }

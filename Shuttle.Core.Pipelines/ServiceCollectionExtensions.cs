@@ -22,9 +22,7 @@ public static class ServiceCollectionExtensions
 
                 options.PipelineCompleted = pipelineProcessingBuilder.Options.PipelineCompleted;
                 options.PipelineCreated = pipelineProcessingBuilder.Options.PipelineCreated;
-                options.PipelineObtained = pipelineProcessingBuilder.Options.PipelineObtained;
                 options.PipelineRecursiveException = pipelineProcessingBuilder.Options.PipelineRecursiveException;
-                options.PipelineReleased = pipelineProcessingBuilder.Options.PipelineReleased;
                 options.PipelineStarting = pipelineProcessingBuilder.Options.PipelineStarting;
                 options.StageCompleted = pipelineProcessingBuilder.Options.StageCompleted;
                 options.StageStarting = pipelineProcessingBuilder.Options.StageStarting;
@@ -32,8 +30,8 @@ public static class ServiceCollectionExtensions
                 options.TransactionScopePipelineStageName = pipelineProcessingBuilder.Options.TransactionScopePipelineStageName;
             });
 
-            services.TryAddSingleton<IPipelineFactory, PipelineFactory>();
-            services.AddSingleton<IPipelineDependencies, PipelineDependencies>();
+            services.TryAddTransient<IPipelineFactory, PipelineFactory>();
+            services.AddTransient<IPipelineDependencies, PipelineDependencies>();
 
             return services;
         }

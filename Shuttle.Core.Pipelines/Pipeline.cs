@@ -27,7 +27,6 @@ public class Pipeline : IPipeline
 
     private readonly string _raisingPipelineEvent = Resources.VerboseRaisingPipelineEvent;
 
-    private bool _optimized;
     private ITransactionScope? _transactionScope;
 
     protected List<IPipelineStage> Stages = [];
@@ -124,13 +123,6 @@ public class Pipeline : IPipeline
 
     public virtual async Task<bool> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        if (!_optimized)
-        {
-            await OptimizeAsync(cancellationToken);
-
-            _optimized = true;
-        }
-
         Aborted = false;
         Exception = null;
 
@@ -301,53 +293,6 @@ public class Pipeline : IPipeline
         }
 
         return this;
-    }
-
-    private bool HandlesType(Type type)
-    {
-        return _observerMethodInvokers.ContainsKey(type) || _delegates.ContainsKey(type) || type == _completeTransactionScopeType || type == _disposeTransactionScopeType;
-    }
-
-    private async Task OptimizeAsync(CancellationToken cancellationToken)
-    {
-        if (!_pipelineDependencies.PipelineOptions.OptimizePipelines)
-        {
-            return;
-        }
-
-        var optimizedStages = new List<IPipelineStage>();
-
-        foreach (var stage in Stages)
-        {
-            var events = new List<Type>();
-
-            foreach (var @event in stage.Events)
-            {
-                if (!HandlesType(@event))
-                {
-                    await _pipelineDependencies.PipelineOptions.Optimized.InvokeAsync(new(this, $"removed event = '{@event.FullName}' / stage = '{stage.Name}'"), cancellationToken);
-                    continue;
-                }
-                events.Add(@event);
-            }
-
-            if (!events.Any())
-            {
-                await _pipelineDependencies.PipelineOptions.Optimized.InvokeAsync(new(this, $"removed stage = '{stage.Name}' (no events)"), cancellationToken);
-                continue;
-            }
-
-            var optimizedStage = new PipelineStage(stage.Name);
-
-            foreach (var @event in events)
-            {
-                optimizedStage.WithEvent(@event);
-            }
-
-            optimizedStages.Add(optimizedStage);
-        }
-
-        Stages = optimizedStages;
     }
 
     private async Task RaiseEventAsync(Type eventType, CancellationToken cancellationToken, bool ignoreAbort)

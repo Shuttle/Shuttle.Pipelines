@@ -45,7 +45,7 @@ public class PipelineBuilder(IServiceCollection services)
                     continue;
                 }
 
-                Services.AddSingleton(interfaceType, type);
+                Services.AddScoped(interfaceType, type);
             }
             else
             {
