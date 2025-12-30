@@ -2,6 +2,7 @@ using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 using Shuttle.Core.TransactionScope;
 using System.Reflection;
+using System.Transactions;
 
 namespace Shuttle.Core.Pipelines;
 
@@ -17,6 +18,7 @@ public class Pipeline : IPipeline
     private readonly Dictionary<Type, List<PipelineObserverMethodInvoker>> _observerMethodInvokers = new();
 
     private readonly Type _abortPipelineType = typeof(AbortPipeline);
+    private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
     private readonly Type _completeTransactionScopeType = typeof(CompleteTransactionScope);
     private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
     private readonly Type _executionCancelledType = typeof(ExecutionCancelled);
@@ -140,13 +142,22 @@ public class Pipeline : IPipeline
                     throw new PipelineException(Resources.TransactionScopeAlreadyStartedException);
                 }
 
-                var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _pipelineDependencies.TransactionScopeOptions.IsolationLevel, _pipelineDependencies.TransactionScopeOptions.Timeout);
+                if (Transaction.Current == null)
+                {
+                    EventType = _startTransactionScopeType;
 
-                await _pipelineDependencies.PipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
+                    var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _pipelineDependencies.TransactionScopeOptions.IsolationLevel, _pipelineDependencies.TransactionScopeOptions.Timeout);
 
-                _transactionScope = _pipelineDependencies.TransactionScopeFactory.Create(transactionScopeEventArgs.IsolationLevel, transactionScopeEventArgs.Timeout);
+                    await _pipelineDependencies.PipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
 
-                State.SetTransactionScope(_transactionScope);
+                    _transactionScope = _pipelineDependencies.TransactionScopeFactory.Create(transactionScopeEventArgs.IsolationLevel, transactionScopeEventArgs.Timeout);
+
+                    State.SetTransactionScope(_transactionScope);
+                }
+                else
+                {
+                    await _pipelineDependencies.PipelineOptions.TransactionScopeIgnored.InvokeAsync(_pipelineEventArgs, cancellationToken);
+                }
             }
 
             await _pipelineDependencies.PipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
@@ -159,11 +170,11 @@ public class Pipeline : IPipeline
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (eventType == _completeTransactionScopeType)
+                    if (eventType == _completeTransactionScopeType && _transactionScope != null)
                     {
                         await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
-                        _transactionScope?.Complete();
+                        _transactionScope.Complete();
                         State.Remove("TransactionScope");
 
                         await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
@@ -171,7 +182,7 @@ public class Pipeline : IPipeline
                         continue;
                     }
 
-                    if (eventType == _disposeTransactionScopeType)
+                    if (eventType == _disposeTransactionScopeType && _transactionScope != null)
                     {
                         await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
                         await DisposeTransactionScopeAsync();
@@ -263,8 +274,13 @@ public class Pipeline : IPipeline
 
     private async Task DisposeTransactionScopeAsync()
     {
-        await (_transactionScope?.TryDisposeAsync() ?? Task.CompletedTask);
+        if (_transactionScope != null)
+        {
+            await _transactionScope.TryDisposeAsync();
+        }
+
         _transactionScope = null;
+
         State.Remove("TransactionScope");
     }
 
