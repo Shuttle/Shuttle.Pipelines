@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 
@@ -21,12 +22,12 @@ public class PipelineBuilder(IServiceCollection services)
 
         foreach (var type in assembly.GetTypesCastableToAsync<IPipeline>().GetAwaiter().GetResult())
         {
-            if (type.IsInterface || type.IsAbstract || Services.Contains(ServiceDescriptor.Transient(type, type)))
+            if (type.IsInterface || type.IsAbstract)
             {
                 continue;
             }
 
-            Services.AddTransient(type, type);
+            Services.TryAddTransient(type);
         }
 
         foreach (var type in assembly.GetTypesCastableToAsync<IPipelineObserver>().GetAwaiter().GetResult())
@@ -45,7 +46,7 @@ public class PipelineBuilder(IServiceCollection services)
                     continue;
                 }
 
-                Services.AddScoped(interfaceType, type);
+                Services.TryAddScoped(interfaceType, type);
             }
             else
             {
