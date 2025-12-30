@@ -12,23 +12,11 @@ public static class ServiceCollectionExtensions
         {
             Guard.AgainstNull(services);
 
+            services.AddOptions<PipelineOptions>();
+
             var pipelineProcessingBuilder = new PipelineBuilder(services);
 
             builder?.Invoke(pipelineProcessingBuilder);
-
-            services.AddOptions<PipelineOptions>().Configure(options =>
-            {
-                options.ReusePipelines = pipelineProcessingBuilder.Options.ReusePipelines;
-
-                options.PipelineCompleted = pipelineProcessingBuilder.Options.PipelineCompleted;
-                options.PipelineCreated = pipelineProcessingBuilder.Options.PipelineCreated;
-                options.PipelineRecursiveException = pipelineProcessingBuilder.Options.PipelineRecursiveException;
-                options.PipelineStarting = pipelineProcessingBuilder.Options.PipelineStarting;
-                options.StageCompleted = pipelineProcessingBuilder.Options.StageCompleted;
-                options.StageStarting = pipelineProcessingBuilder.Options.StageStarting;
-
-                options.TransactionScopePipelineStageName = pipelineProcessingBuilder.Options.TransactionScopePipelineStageName;
-            });
 
             services.TryAddTransient<IPipelineFactory, PipelineFactory>();
             services.AddTransient<IPipelineDependencies, PipelineDependencies>();

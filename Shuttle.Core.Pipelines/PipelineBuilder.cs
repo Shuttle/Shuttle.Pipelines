@@ -7,11 +7,11 @@ namespace Shuttle.Core.Pipelines;
 
 public class PipelineBuilder(IServiceCollection services)
 {
-    public PipelineOptions Options
+    public PipelineBuilder Configure(Action<PipelineOptions> configure)
     {
-        get;
-        set => field = value ?? throw new ArgumentNullException(nameof(value));
-    } = new();
+        Services.Configure(configure);
+        return this;
+    }
 
     public IServiceCollection Services { get; } = Guard.AgainstNull(services);
 

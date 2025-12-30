@@ -241,6 +241,8 @@ public class Pipeline : IPipeline
 
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
 
+                    await _pipelineDependencies.PipelineOptions.PipelineAborted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
+
                     return false;
                 }
             }
