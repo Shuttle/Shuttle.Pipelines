@@ -41,11 +41,6 @@ public class PipelineBuilder(IServiceCollection services)
 
             if (interfaceType != null)
             {
-                if (Services.Contains(ServiceDescriptor.Singleton(interfaceType, type)))
-                {
-                    continue;
-                }
-
                 Services.TryAddScoped(interfaceType, type);
             }
             else
