@@ -18,8 +18,8 @@ public static class ServiceCollectionExtensions
 
             builder?.Invoke(pipelineProcessingBuilder);
 
-            services.TryAddTransient<IPipelineFactory, PipelineFactory>();
-            services.TryAddTransient<IPipelineDependencies, PipelineDependencies>();
+            services.TryAddScoped<IPipelineFactory, PipelineFactory>();
+            services.TryAddScoped<IPipelineDependencies, PipelineDependencies>();
 
             return services;
         }
