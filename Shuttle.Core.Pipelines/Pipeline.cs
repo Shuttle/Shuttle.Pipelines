@@ -21,7 +21,6 @@ public class Pipeline : IPipeline
     private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
     private readonly Type _completeTransactionScopeType = typeof(CompleteTransactionScope);
     private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
-    private readonly Type _executionCancelledType = typeof(ExecutionCancelled);
     private readonly Type _pipelineExceptionType = typeof(PipelineFailed);
     private readonly Dictionary<Type, PipelineContextConstructorInvoker> _pipelineContextConstructors = new();
 
@@ -206,15 +205,6 @@ public class Pipeline : IPipeline
                 {
                     await DisposeTransactionScopeAsync();
 
-                    try
-                    {
-                        await RaiseEventAsync(_executionCancelledType, cancellationToken, false).ConfigureAwait(false);
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
-
                     throw;
                 }
                 catch (RecursiveException)
@@ -225,7 +215,7 @@ public class Pipeline : IPipeline
                     {
                         await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
                     }
-                    catch (Exception)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         // give up
                     }
@@ -358,7 +348,7 @@ public class Pipeline : IPipeline
                     {
                         await observer.InvokeAsync(pipelineContext, cancellationToken).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         if (eventType == _pipelineExceptionType)
                         {
@@ -397,7 +387,7 @@ public class Pipeline : IPipeline
                             await (Task)observerDelegate.Handler.DynamicInvoke()!;
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not OperationCanceledException)
                     {
                         if (eventType == _pipelineExceptionType)
                         {
