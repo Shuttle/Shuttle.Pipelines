@@ -174,6 +174,9 @@ public class Pipeline : IPipeline
                         await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
                         _transactionScope.Complete();
+                        _transactionScope.Dispose();
+                        _transactionScope = null;
+
                         State.Remove("TransactionScope");
 
                         await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
@@ -184,7 +187,7 @@ public class Pipeline : IPipeline
                     if (eventType == _disposeTransactionScopeType && _transactionScope != null)
                     {
                         await _pipelineDependencies.PipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-                        await DisposeTransactionScopeAsync();
+                        DisposeTransactionScope();
                         await _pipelineDependencies.PipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
                         continue;
@@ -197,13 +200,15 @@ public class Pipeline : IPipeline
                         continue;
                     }
 
+                    DisposeTransactionScope();
+
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
 
                     return false;
                 }
                 catch (OperationCanceledException)
                 {
-                    await DisposeTransactionScopeAsync();
+                    DisposeTransactionScope();
 
                     throw;
                 }
@@ -222,7 +227,7 @@ public class Pipeline : IPipeline
                 }
                 catch (Exception ex)
                 {
-                    await DisposeTransactionScopeAsync();
+                    DisposeTransactionScope();
 
                     Exception = ex.TrimLeading<TargetInvocationException>();
 
@@ -252,7 +257,7 @@ public class Pipeline : IPipeline
 
             await _pipelineDependencies.PipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
-            await DisposeTransactionScopeAsync();
+            DisposeTransactionScope();
         }
 
         StageName = string.Empty;
@@ -262,19 +267,15 @@ public class Pipeline : IPipeline
         return true;
     }
 
-    private async Task DisposeTransactionScopeAsync()
+    private void DisposeTransactionScope()
     {
-        if (_transactionScope != null)
-        {
-            await _transactionScope.TryDisposeAsync();
-        }
-
+        _transactionScope?.Dispose();
         _transactionScope = null;
 
         State.Remove("TransactionScope");
     }
 
-    private IPipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider)
+    private Pipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider)
     {
         var observerType = pipelineObserverProvider.GetObserverType();
 
