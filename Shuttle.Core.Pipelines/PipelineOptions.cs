@@ -8,6 +8,7 @@ public class PipelineOptions
     internal Dictionary<Type, List<string>> TransactionScopePipelineStageName = new();
 
     public AsyncEvent<PipelineEventArgs> PipelineAborted { get; set; } = new();
+    public AsyncEvent<PipelineEventArgs> PipelineFailed { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> PipelineCompleted { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> PipelineCreated { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> PipelineRecursiveException { get; set; } = new();

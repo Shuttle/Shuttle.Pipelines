@@ -21,7 +21,7 @@ public class Pipeline : IPipeline
     private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
     private readonly Type _completeTransactionScopeType = typeof(CompleteTransactionScope);
     private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
-    private readonly Type _pipelineExceptionType = typeof(PipelineFailed);
+    private readonly Type _pipelineFailedType = typeof(PipelineFailed);
     private readonly Dictionary<Type, PipelineContextConstructorInvoker> _pipelineContextConstructors = new();
 
     private readonly PipelineEventArgs _pipelineEventArgs;
@@ -212,13 +212,16 @@ public class Pipeline : IPipeline
 
                     throw;
                 }
-                catch (RecursiveException)
+                catch (RecursiveException rex)
                 {
+                    Exception = rex;
+
                     Abort();
 
                     try
                     {
                         await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
+                        await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
@@ -233,7 +236,8 @@ public class Pipeline : IPipeline
 
                     ExceptionHandled = false;
 
-                    await RaiseEventAsync(_pipelineExceptionType, cancellationToken, true).ConfigureAwait(false);
+                    await RaiseEventAsync(_pipelineFailedType, cancellationToken, true).ConfigureAwait(false);
+                    await _pipelineDependencies.PipelineOptions.PipelineFailed.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
                     if (!ExceptionHandled)
                     {
@@ -246,7 +250,6 @@ public class Pipeline : IPipeline
                     }
 
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
-
                     await _pipelineDependencies.PipelineOptions.PipelineAborted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
                     return false;
@@ -351,14 +354,12 @@ public class Pipeline : IPipeline
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        if (eventType == _pipelineExceptionType)
+                        if (eventType == _pipelineFailedType)
                         {
                             if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
                             {
                                 throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
                             }
-
-                            await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
                         }
                         else
                         {
@@ -390,14 +391,12 @@ public class Pipeline : IPipeline
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        if (eventType == _pipelineExceptionType)
+                        if (eventType == _pipelineFailedType)
                         {
                             if (_pipelineDependencies.PipelineOptions.PipelineRecursiveException.Count == 0)
                             {
                                 throw new RecursiveException(Resources.ExceptionHandlerRecursiveException, ex);
                             }
-
-                            await _pipelineDependencies.PipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
                         }
                         else
                         {
