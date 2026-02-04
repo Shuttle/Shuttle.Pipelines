@@ -3,20 +3,19 @@ using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 using Shuttle.Core.TransactionScope;
+using System;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
 [TestFixture]
 public class PipelineObserverFixture
 {
-    private static IPipelineDependencies GetPipelineContext(ServiceProvider? serviceProvider = null)
+    private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
     {
-        return new PipelineDependencies(
-            Options.Create(new PipelineOptions()),
-            Options.Create(new TransactionScopeOptions()),
-            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
-            serviceProvider ?? new Mock<IServiceProvider>().Object
-        );
+        var pipelineOptions = Options.Create(new PipelineOptions());
+        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
+
+        return new(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]
@@ -28,12 +27,7 @@ public class PipelineObserverFixture
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var pipeline = new Pipeline(new PipelineDependencies(
-            Options.Create(new PipelineOptions()),
-            Options.Create(new TransactionScopeOptions()),
-            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
-            serviceProvider
-        ));
+        var pipeline = GetPipeline(serviceProvider);
 
         pipeline
             .AddStage("Stage")
@@ -53,7 +47,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_execute_a_valid_pipeline_async()
     {
-        var pipeline = new Pipeline(GetPipelineContext());
+        var pipeline = GetPipeline();
 
         pipeline
             .AddStage("Stage")
@@ -73,7 +67,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_register_events_after_existing_event_async()
     {
-        var pipeline = new Pipeline(GetPipelineContext());
+        var pipeline = GetPipeline();
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent3>()
@@ -92,7 +86,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(GetPipelineContext());
+        var pipeline = GetPipeline();
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -113,7 +107,7 @@ public class PipelineObserverFixture
     public void Should_fail_on_attempt_to_register_events_after_non_existent_event()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            new Pipeline(GetPipelineContext())
+            GetPipeline()
                 .AddStage("Stage")
                 .AfterEvent<MockPipelineEvent1>()
                 .Add<MockPipelineEvent2>());
@@ -123,7 +117,7 @@ public class PipelineObserverFixture
     public void Should_fail_on_attempt_to_register_events_before_non_existent_event()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            new Pipeline(GetPipelineContext())
+            GetPipeline()
                 .AddStage("Stage")
                 .BeforeEvent<MockPipelineEvent1>()
                 .Add<MockPipelineEvent2>());
@@ -132,7 +126,7 @@ public class PipelineObserverFixture
     [Test]
     public async Task Should_be_able_to_call_an_interfaced_observer_async()
     {
-        var pipeline = new Pipeline(GetPipelineContext());
+        var pipeline = GetPipeline();
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -149,8 +143,10 @@ public class PipelineObserverFixture
     [Test]
     public void Should_be_able_to_use_scoped_ambient_context_state_async()
     {
+        var pipelineOptions = Options.Create(new PipelineOptions());
+        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(GetPipelineContext(), ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
@@ -163,8 +159,10 @@ public class PipelineObserverFixture
     [Test]
     public void Should_be_not_able_to_use_ambient_context_state_without_scope_async()
     {
+        var pipelineOptions = Options.Create(new PipelineOptions());
+        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(GetPipelineContext(), ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {

@@ -15,7 +15,7 @@ internal static class PipelineExtensions
 
     public static void MapObservers(this Pipeline pipeline)
     {
-        pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> pipelineContext, CancellationToken cancellationToken) =>
+        pipeline.AddObserver(async (IPipelineContext<MockPipelineEvent1> pipelineContext) =>
         {
             CallSequence(pipelineContext, "1");
 
@@ -85,12 +85,10 @@ public class PipelineDelegateFixture
 
     private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
     {
-        return new(new PipelineDependencies(
-            Options.Create(new PipelineOptions()),
-            Options.Create(new TransactionScopeOptions()),
-            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
-            serviceProvider ?? new Mock<IServiceProvider>().Object
-        ));
+        var pipelineOptions = Options.Create(new PipelineOptions());
+        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
+
+        return new(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]
@@ -113,12 +111,7 @@ public class PipelineDelegateFixture
     [Test]
     public async Task Should_be_able_to_register_events_before_existing_event_async()
     {
-        var pipeline = new Pipeline(new PipelineDependencies(
-            Options.Create(new PipelineOptions()),
-            Options.Create(new TransactionScopeOptions()),
-            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
-            new Mock<IServiceProvider>().Object
-        ));
+        var pipeline = GetPipeline();
 
         pipeline.AddStage("Stage")
             .WithEvent<MockPipelineEvent1>();
@@ -140,14 +133,7 @@ public class PipelineDelegateFixture
 
         services.AddSingleton<MockAuthenticateObserver>();
 
-        var serviceProvider = services.BuildServiceProvider();
-
-        var pipeline = new Pipeline(new PipelineDependencies(
-            Options.Create(new PipelineOptions()),
-            Options.Create(new TransactionScopeOptions()),
-            new TransactionScopeFactory(Options.Create(new TransactionScopeOptions())),
-            serviceProvider 
-        ));
+        var pipeline = GetPipeline();
 
         pipeline
             .AddStage("Stage")

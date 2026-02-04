@@ -8,12 +8,18 @@ public class PipelineStage(string name) : IPipelineStage
     private readonly List<Type> _pipelineEvents = [];
 
     public string Name { get; } = Guard.AgainstNull(name);
-
+    public bool RequiresTransactionScope { get; private set; }
     public IEnumerable<Type> Events => new ReadOnlyCollection<Type>(_pipelineEvents);
 
     public IPipelineStage WithEvent<TEvent>() where TEvent : class
     {
         return WithEvent(typeof(TEvent));
+    }
+
+    public IPipelineStage WithTransactionScope()
+    {
+        RequiresTransactionScope = true;
+        return this;
     }
 
     public IAddEventBefore BeforeEvent<TEvent>() where TEvent : class

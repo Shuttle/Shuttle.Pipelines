@@ -19,7 +19,6 @@ public static class ServiceCollectionExtensions
             builder?.Invoke(pipelineProcessingBuilder);
 
             services.TryAddScoped<IPipelineFactory, PipelineFactory>();
-            services.TryAddScoped<IPipelineDependencies, PipelineDependencies>();
 
             return services;
         }
