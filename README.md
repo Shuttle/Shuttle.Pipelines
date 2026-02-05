@@ -20,7 +20,7 @@ services.AddPipelines(builder => {
 
 This will register the `IPipelineFactory` as `Scoped` and, using the builder, add all `IPipeline` implementations as `Transient` and all `IPipelineObserver` implementations as `Scoped`.
 
-Since pipelines are quite frequently extended by adding observers, the recommended pattern is to make use of an `IHostedService` implementation that accepts the `IPipelineFactory` dependency:
+Since pipelines are quite frequently extended by adding observers, the recommended pattern is to make use of an `IHostedService` implementation that accepts the `PipelineOptions` dependency:
 
 ```c#
 public class CustomHostedService : IHostedService
@@ -32,10 +32,10 @@ public class CustomHostedService : IHostedService
     {
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
-        _pipelineOptions.PipelineCreated += OnPipelineCreated;
+        _pipelineOptions.PipelineCreated += PipelineCreated;
     }
 
-    private async Task OnPipelineCreated(object sender, PipelineEventArgs e)
+    private async Task PipelineCreated(PipelineEventArgs e, CancellationToken cancellationToken)
     {
         if (e.Pipeline.GetType() != _pipelineType)
         {
@@ -54,7 +54,7 @@ public class CustomHostedService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _pipelineOptions.PipelineCreated -= OnPipelineCreated;
+        _pipelineOptions.PipelineCreated -= PipelineCreated;
 
         await Task.CompletedTask;
     }
@@ -79,7 +79,7 @@ The above is a rather naive example but it should give you an idea of how to ext
 
 ## Overview
 
-A `Pipeline` is a variation of the pipes and filters pattern and consists of 1 or more stages that each contain one or more event types. When the pipeline is executed each event in each stage is raised in the order that they were registered. One or more observers should be registered to handle the relevant event(s).
+A `Pipeline` is a variation of the pipes and filters pattern and consists of one or more stages that each contain one or more event types. When the pipeline is executed each event in each stage is raised in the order that they were registered. One or more observers should be registered to handle the relevant event(s).
 
 Each `Pipeline` always has its own state that is simply a name/value pair with some convenience methods to get and set/replace values. The `State` class will use the full type name of the object as a key should none be specified:
 
@@ -114,7 +114,11 @@ The `ExecuteAsync` method is used for processing the event.
 The `IPipelineContext<T>` provides access to the `Pipeline` instance, allowing observers to interact with the pipeline state or abort the pipeline.
 
 ```c#
-public interface IPipelineContext<out T> where T : class
+public interface IPipelineContext<T> : IPipelineContext
+{
+}
+
+public interface IPipelineContext
 {
     IPipeline Pipeline { get; }
 }
@@ -195,8 +199,6 @@ pipeline.AddStage("DatabaseOperation")
     .WithEvent<OnOperation>()
     .WithTransactionScope(); // Starts a TransactionScope for this stage
 ```
-
-You can also explicitly manage the scope using `CompleteTransactionScope` and `DisposeTransactionScope` events, though `WithTransactionScope()` is the recommended extension method.
 
 ### Event Ordering
 
