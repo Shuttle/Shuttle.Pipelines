@@ -1,9 +1,11 @@
 namespace Shuttle.Core.Pipelines.Tests;
 
-public class MockAuthenticateObserver :
+public interface IMockAuthenticateObserver :
     IPipelineObserver<MockPipelineEvent1>,
     IPipelineObserver<MockPipelineEvent2>,
-    IPipelineObserver<MockPipelineEvent3>
+    IPipelineObserver<MockPipelineEvent3>;
+
+public class MockAuthenticateObserver : IMockAuthenticateObserver
 {
     public string CallSequence { get; private set; } = string.Empty;
 

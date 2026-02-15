@@ -10,6 +10,7 @@ public interface IPipeline
     string StageName { get; }
     Type? EventType { get; }
     IState State { get; }
+    IServiceProvider ServiceProvider { get; }
     void Abort();
 
     IPipeline AddObserver(IPipelineObserver pipelineObserver);
@@ -19,4 +20,5 @@ public interface IPipeline
     Task<bool> ExecuteAsync(CancellationToken cancellationToken = default);
     IPipelineStage GetStage(string name);
     void MarkExceptionHandled();
+    IPipeline AddObserver<T>();
 }

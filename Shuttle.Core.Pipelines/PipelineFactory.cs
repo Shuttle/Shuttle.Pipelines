@@ -1,11 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
 
-public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider) : IPipelineFactory
+public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider, ILogger<PipelineFactory>? logger = null) : IPipelineFactory
 {
+    private readonly ILogger<PipelineFactory> _logger = logger ?? NullLogger<PipelineFactory>.Instance;
     private readonly PipelineOptions _pipelineOptions = Guard.AgainstNull(pipelineOptions).Value;
     private readonly IServiceProvider _serviceProvider = Guard.AgainstNull(serviceProvider);
 
@@ -17,6 +20,8 @@ public class PipelineFactory(IOptions<PipelineOptions> pipelineOptions, IService
         {
             throw new InvalidOperationException(string.Format(Resources.NullPipelineException, typeof(TPipeline).FullName));
         }
+
+        LogMessage.PipelineCreated<TPipeline>(_logger);
 
         await _pipelineOptions.PipelineCreated.InvokeAsync(new(pipeline), cancellationToken);
 

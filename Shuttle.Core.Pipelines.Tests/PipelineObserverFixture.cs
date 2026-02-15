@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
 using Shuttle.Core.TransactionScope;
-using System;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -19,7 +18,7 @@ public class PipelineObserverFixture
     }
 
     [Test]
-    public async Task Should_be_able_to_execute_a_type_based_pipeline_async()
+    public async Task Should_be_able_to_execute_a_concrete_type_based_pipeline_async()
     {
         var services = new ServiceCollection();
 
@@ -40,6 +39,32 @@ public class PipelineObserverFixture
         await pipeline.ExecuteAsync(CancellationToken.None);
 
         var observer = serviceProvider.GetService<MockAuthenticateObserver>();
+
+        Assert.That(observer!.CallSequence, Is.EqualTo("123"));
+    }
+
+    [Test]
+    public async Task Should_be_able_to_execute_an_interface_based_pipeline_async()
+    {
+        var services = new ServiceCollection();
+
+        services.AddSingleton<IMockAuthenticateObserver, MockAuthenticateObserver>();
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        var pipeline = GetPipeline(serviceProvider);
+
+        pipeline
+            .AddStage("Stage")
+            .WithEvent<MockPipelineEvent1>()
+            .WithEvent<MockPipelineEvent2>()
+            .WithEvent<MockPipelineEvent3>();
+
+        pipeline.AddObserver<IMockAuthenticateObserver>();
+
+        await pipeline.ExecuteAsync(CancellationToken.None);
+
+        var observer = serviceProvider.GetService<IMockAuthenticateObserver>() as MockAuthenticateObserver;
 
         Assert.That(observer!.CallSequence, Is.EqualTo("123"));
     }

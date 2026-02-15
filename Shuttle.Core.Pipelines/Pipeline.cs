@@ -1,49 +1,58 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Transactions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
 using Shuttle.Core.TransactionScope;
-using System.Reflection;
-using System.Transactions;
 
 namespace Shuttle.Core.Pipelines;
 
 public class Pipeline : IPipeline
 {
-    private readonly TransactionScopeOptions _transactionScopeOptions;
-    private readonly ITransactionScopeFactory _transactionScopeFactory;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly PipelineOptions _pipelineOptions;
     private static readonly Type PipelineObserverType = typeof(IPipelineObserver<>);
     private static readonly Type PipelineContextType = typeof(IPipelineContext<>);
 
-    private readonly SemaphoreSlim _lock = new(1, 1);
-    private readonly Dictionary<Type, List<ObserverDelegate>> _delegates = new();
-    private readonly Dictionary<Type, List<PipelineObserverMethodInvoker>> _observerMethodInvokers = new();
-
     private readonly Type _abortPipelineType = typeof(AbortPipeline);
-    private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
     private readonly Type _completeTransactionScopeType = typeof(CompleteTransactionScope);
+    private readonly Dictionary<Type, List<ObserverDelegate>> _delegates = new();
     private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
-    private readonly Type _pipelineFailedType = typeof(PipelineFailed);
+
+    private readonly ILogger<Pipeline> _logger;
+    private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly Dictionary<Type, List<PipelineObserverMethodInvoker>> _observerMethodInvokers = new();
     private readonly Dictionary<Type, PipelineContextConstructorInvoker> _pipelineContextConstructors = new();
 
     private readonly PipelineEventArgs _pipelineEventArgs;
+    private readonly Type _pipelineFailedType = typeof(PipelineFailed);
+    private readonly PipelineOptions _pipelineOptions;
 
     private readonly string _raisingPipelineEvent = Resources.VerboseRaisingPipelineEvent;
+    private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
+    private readonly ITransactionScopeFactory _transactionScopeFactory;
+    private readonly TransactionScopeOptions _transactionScopeOptions;
 
     private ITransactionScope? _transactionScope;
 
     protected List<IPipelineStage> Stages = [];
 
-    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IOptions<TransactionScopeOptions> transactionScopeOptions, ITransactionScopeFactory transactionScopeFactory, IServiceProvider serviceProvider)
+    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IOptions<TransactionScopeOptions> transactionScopeOptions, ITransactionScopeFactory transactionScopeFactory, IServiceProvider serviceProvider, ILogger<Pipeline>? logger = null)
     {
+        _logger = logger ?? NullLogger<Pipeline>.Instance;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
         _transactionScopeOptions = Guard.AgainstNull(Guard.AgainstNull(transactionScopeOptions).Value);
         _transactionScopeFactory = Guard.AgainstNull(transactionScopeFactory);
-        _serviceProvider = Guard.AgainstNull(serviceProvider);
+        ServiceProvider = Guard.AgainstNull(serviceProvider);
 
         _pipelineEventArgs = new(this);
     }
+
+    public IServiceProvider ServiceProvider { get; }
 
     public Guid Id { get; } = Guid.NewGuid();
     public bool ExceptionHandled { get; internal set; }
@@ -61,7 +70,12 @@ public class Pipeline : IPipeline
 
     public IPipeline AddObserver(Type observerType)
     {
-        return AddObserver(new ServiceProviderPipelineObserverProvider(_serviceProvider, Guard.AgainstNull(observerType)));
+        return AddObserver(new ServiceProviderPipelineObserverProvider(ServiceProvider, Guard.AgainstNull(observerType)));
+    }
+
+    public IPipeline AddObserver<T>()
+    {
+        return AddObserver(typeof(T));
     }
 
     public IPipeline AddObserver<TDelegate>(TDelegate handler) where TDelegate : Delegate
@@ -130,6 +144,7 @@ public class Pipeline : IPipeline
         Aborted = false;
         Exception = null;
 
+        await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
         await _pipelineOptions.PipelineStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
         foreach (var stage in Stages)
@@ -149,6 +164,7 @@ public class Pipeline : IPipeline
 
                     var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _transactionScopeOptions.IsolationLevel, _transactionScopeOptions.Timeout);
 
+                    await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
                     await _pipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
 
                     // This cannot be async as the transaction scope will not be created within this execution context.
@@ -158,12 +174,14 @@ public class Pipeline : IPipeline
                 }
                 else
                 {
+                    await LogEventAsync("Ignored", cancellationToken).ConfigureAwait(false);
                     await _pipelineOptions.TransactionScopeIgnored.InvokeAsync(_pipelineEventArgs, cancellationToken);
                 }
             }
 
+            await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
             await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-            
+
             foreach (var eventType in stage.Events)
             {
                 EventType = eventType;
@@ -205,6 +223,7 @@ public class Pipeline : IPipeline
 
                     DisposeTransactionScope();
 
+                    await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
 
                     return false;
@@ -223,7 +242,9 @@ public class Pipeline : IPipeline
 
                     try
                     {
+                        await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
                         await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
+                        await LogEventAsync("RecursiveException", cancellationToken).ConfigureAwait(false);
                         await _pipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -239,6 +260,7 @@ public class Pipeline : IPipeline
 
                     ExceptionHandled = false;
 
+                    await LogEventAsync("Failed", cancellationToken).ConfigureAwait(false);
                     await RaiseEventAsync(_pipelineFailedType, cancellationToken, true).ConfigureAwait(false);
                     await _pipelineOptions.PipelineFailed.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
@@ -252,6 +274,7 @@ public class Pipeline : IPipeline
                         continue;
                     }
 
+                    await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
                     await _pipelineOptions.PipelineAborted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
@@ -261,6 +284,7 @@ public class Pipeline : IPipeline
 
             EventType = null;
 
+            await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
             await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             DisposeTransactionScope();
@@ -268,24 +292,23 @@ public class Pipeline : IPipeline
 
         StageName = string.Empty;
 
+        await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
         await _pipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
         return true;
     }
 
-    private void DisposeTransactionScope()
-    {
-        _transactionScope?.Dispose();
-        _transactionScope = null;
-
-        State.Remove("TransactionScope");
-    }
-
     private Pipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider)
     {
         var observerType = pipelineObserverProvider.GetObserverType();
+        var observer = pipelineObserverProvider.GetObserverInstance();
+        var implementationType = observer.GetType();
 
-        foreach (var eventInterface in observerType.GetInterfaces()
+        var interfaceTypes = observerType.IsInterface
+            ? new[] { observerType }.Concat(observerType.GetInterfaces())
+            : implementationType.GetInterfaces();
+
+        foreach (var eventInterface in interfaceTypes
                      .Where(item => item.IsGenericType && item.GetGenericTypeDefinition().IsAssignableFrom(PipelineObserverType)))
         {
             var pipelineEventType = eventInterface.GetGenericArguments()[0];
@@ -296,8 +319,7 @@ public class Pipeline : IPipeline
             }
 
             var genericType = PipelineObserverType.MakeGenericType(pipelineEventType);
-
-            var methodInfo = observerType.GetInterfaceMap(genericType).TargetMethods.SingleOrDefault();
+            var methodInfo = implementationType.GetInterfaceMap(genericType).TargetMethods.SingleOrDefault();
 
             if (methodInfo == null)
             {
@@ -308,6 +330,21 @@ public class Pipeline : IPipeline
         }
 
         return this;
+    }
+
+    private void DisposeTransactionScope()
+    {
+        _transactionScope?.Dispose();
+        _transactionScope = null;
+
+        State.Remove("TransactionScope");
+    }
+
+    private async Task LogEventAsync(string eventState, CancellationToken cancellationToken)
+    {
+        LogMessage.PipelineEvent(_logger, $"{EventType?.FullName ?? "(no event)"}{(string.IsNullOrWhiteSpace(eventState) ? string.Empty : $"/{eventState}")}", GetType().FullName ?? "(no name)", !string.IsNullOrWhiteSpace(StageName) ? StageName : "(no stage)");
+
+        await Task.CompletedTask;
     }
 
     private async Task RaiseEventAsync(Type eventType, CancellationToken cancellationToken, bool ignoreAbort)
@@ -325,6 +362,7 @@ public class Pipeline : IPipeline
 
         try
         {
+            await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
             await _pipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             PipelineContextConstructorInvoker? pipelineContextConstructor;
@@ -385,7 +423,7 @@ public class Pipeline : IPipeline
                     {
                         if (observerDelegate.HasParameters)
                         {
-                            await (Task)observerDelegate.Handler.DynamicInvoke(observerDelegate.GetParameters(_serviceProvider, pipelineContext, cancellationToken))!;
+                            await (Task)observerDelegate.Handler.DynamicInvoke(observerDelegate.GetParameters(ServiceProvider, pipelineContext, cancellationToken))!;
                         }
                         else
                         {
@@ -416,6 +454,7 @@ public class Pipeline : IPipeline
         }
         finally
         {
+            await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
             await _pipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
         }
     }
