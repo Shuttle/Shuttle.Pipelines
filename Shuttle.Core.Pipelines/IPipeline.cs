@@ -1,3 +1,5 @@
+using Shuttle.Core.TransactionScope;
+
 namespace Shuttle.Core.Pipelines;
 
 public interface IPipeline
@@ -11,6 +13,7 @@ public interface IPipeline
     Type? EventType { get; }
     IState State { get; }
     IServiceProvider ServiceProvider { get; }
+    ITransactionScope? TransactionScope { get; }
     void Abort();
 
     IPipeline AddObserver(IPipelineObserver pipelineObserver);
