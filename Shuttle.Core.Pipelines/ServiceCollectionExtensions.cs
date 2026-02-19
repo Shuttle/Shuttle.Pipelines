@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shuttle.Core.Contract;
 
 namespace Shuttle.Core.Pipelines;
@@ -17,8 +16,6 @@ public static class ServiceCollectionExtensions
             var pipelineProcessingBuilder = new PipelineBuilder(services);
 
             builder?.Invoke(pipelineProcessingBuilder);
-
-            services.TryAddScoped<IPipelineFactory, PipelineFactory>();
 
             return services;
         }

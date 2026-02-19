@@ -5,23 +5,23 @@ namespace Shuttle.Core.Pipelines;
 public interface IPipeline
 {
     bool Aborted { get; }
+    Type? EventType { get; }
     Exception? Exception { get; }
     bool ExceptionHandled { get; }
 
     Guid Id { get; }
-    string StageName { get; }
-    Type? EventType { get; }
-    IState State { get; }
     IServiceProvider ServiceProvider { get; }
+    string StageName { get; }
+    IState State { get; }
     ITransactionScope? TransactionScope { get; }
     void Abort();
 
-    IPipeline AddObserver(IPipelineObserver pipelineObserver);
-    IPipeline AddObserver(Type observerType);
-    IPipeline AddObserver<TDelegate>(TDelegate handler) where TDelegate : Delegate;
+    IPipeline AddObserver(IPipelineObserver pipelineObserver, ObserverPosition position = ObserverPosition.Anywhere);
+    IPipeline AddObserver(Type observerType, ObserverPosition position = ObserverPosition.Anywhere);
+    IPipeline AddObserver<TDelegate>(TDelegate handler, ObserverPosition position = ObserverPosition.Anywhere) where TDelegate : Delegate;
+    IPipeline AddObserver<T>(ObserverPosition position = ObserverPosition.Anywhere);
     IPipelineStage AddStage(string name);
     Task<bool> ExecuteAsync(CancellationToken cancellationToken = default);
     IPipelineStage GetStage(string name);
     void MarkExceptionHandled();
-    IPipeline AddObserver<T>();
 }

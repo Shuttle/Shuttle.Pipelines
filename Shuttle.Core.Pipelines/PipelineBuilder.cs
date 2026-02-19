@@ -27,7 +27,16 @@ public class PipelineBuilder(IServiceCollection services)
                 continue;
             }
 
-            Services.TryAddTransient(type);
+            var interfaceType = type.InterfaceMatching($"I{type.Name}");
+
+            if (interfaceType != null)
+            {
+                Services.TryAddScoped(interfaceType, type);
+            }
+            else
+            {
+                Services.TryAddTransient(type);
+            }
         }
 
         foreach (var type in assembly.GetTypesCastableToAsync<IPipelineObserver>().GetAwaiter().GetResult())

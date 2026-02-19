@@ -6,14 +6,16 @@ namespace Shuttle.Core.Pipelines;
 
 internal readonly struct PipelineObserverMethodInvoker
 {
+    public ObserverPosition Position { get; }
     public IPipelineObserverProvider PipelineObserverProvider { get; }
 
     private static readonly Type PipelineContextType = typeof(PipelineContext<>);
 
     private readonly AsyncInvokeHandler _asyncInvoker;
 
-    public PipelineObserverMethodInvoker(IPipelineObserverProvider pipelineObserverProvider, MethodInfo methodInfo)
+    public PipelineObserverMethodInvoker(IPipelineObserverProvider pipelineObserverProvider, MethodInfo methodInfo, ObserverPosition position)
     {
+        Position = position;
         PipelineObserverProvider = Guard.AgainstNull(pipelineObserverProvider);
 
         var dynamicMethod = new DynamicMethod(string.Empty, typeof(Task), [typeof(object), typeof(object), typeof(CancellationToken)], PipelineContextType.Module);

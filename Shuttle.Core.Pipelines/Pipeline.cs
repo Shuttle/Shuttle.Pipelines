@@ -59,22 +59,22 @@ public class Pipeline : IPipeline
 
     public IState State { get; } = new State();
 
-    public IPipeline AddObserver(IPipelineObserver pipelineObserver)
+    public IPipeline AddObserver(IPipelineObserver pipelineObserver, ObserverPosition position = ObserverPosition.Anywhere)
     {
-        return AddObserver(new InstancePipelineObserverProvider(pipelineObserver));
+        return AddObserver(new InstancePipelineObserverProvider(pipelineObserver), position);
     }
 
-    public IPipeline AddObserver(Type observerType)
+    public IPipeline AddObserver(Type observerType, ObserverPosition position = ObserverPosition.Anywhere)
     {
-        return AddObserver(new ServiceProviderPipelineObserverProvider(ServiceProvider, Guard.AgainstNull(observerType)));
+        return AddObserver(new ServiceProviderPipelineObserverProvider(ServiceProvider, Guard.AgainstNull(observerType)), position);
     }
 
-    public IPipeline AddObserver<T>()
+    public IPipeline AddObserver<T>(ObserverPosition position = ObserverPosition.Anywhere)
     {
-        return AddObserver(typeof(T));
+        return AddObserver(typeof(T), position);
     }
 
-    public IPipeline AddObserver<TDelegate>(TDelegate handler) where TDelegate : Delegate
+    public IPipeline AddObserver<TDelegate>(TDelegate handler, ObserverPosition position = ObserverPosition.Anywhere) where TDelegate : Delegate
     {
         if (!typeof(Task).IsAssignableFrom(Guard.AgainstNull(handler).Method.ReturnType))
         {
@@ -99,8 +99,8 @@ public class Pipeline : IPipeline
             throw new ApplicationException(Resources.PipelineDelegateTypeException);
         }
 
-        _delegates.TryAdd(eventType, new());
-        _delegates[eventType].Add(new(handler, handler.Method.GetParameters().Select(item => item.ParameterType)));
+        _delegates.TryAdd(eventType, []);
+        _delegates[eventType].Add(new(handler, handler.Method.GetParameters().Select(item => item.ParameterType), position));
 
         return this;
     }
@@ -140,8 +140,10 @@ public class Pipeline : IPipeline
         Aborted = false;
         Exception = null;
 
-        await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
+        LogEvent("Starting");
         await _pipelineOptions.PipelineStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
+
+        ReorderObservers();
 
         foreach (var stage in Stages)
         {
@@ -160,7 +162,7 @@ public class Pipeline : IPipeline
 
                     var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _transactionScopeOptions.IsolationLevel, _transactionScopeOptions.Timeout);
 
-                    await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
+                    LogEvent("Starting");
                     await _pipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
 
                     // This cannot be async as the transaction scope will not be created within this execution context.
@@ -168,12 +170,12 @@ public class Pipeline : IPipeline
                 }
                 else
                 {
-                    await LogEventAsync("Ignored", cancellationToken).ConfigureAwait(false);
+                    LogEvent("Ignored");
                     await _pipelineOptions.TransactionScopeIgnored.InvokeAsync(_pipelineEventArgs, cancellationToken);
                 }
             }
 
-            await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
+            LogEvent("Starting");
             await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             foreach (var eventType in stage.Events)
@@ -215,7 +217,7 @@ public class Pipeline : IPipeline
 
                     DisposeTransactionScope();
 
-                    await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
+                    LogEvent("Aborted");
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
 
                     return false;
@@ -234,9 +236,9 @@ public class Pipeline : IPipeline
 
                     try
                     {
-                        await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
+                        LogEvent("Aborted");
                         await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
-                        await LogEventAsync("RecursiveException", cancellationToken).ConfigureAwait(false);
+                        LogEvent("RecursiveException");
                         await _pipelineOptions.PipelineRecursiveException.InvokeAsync(_pipelineEventArgs, cancellationToken);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -252,7 +254,7 @@ public class Pipeline : IPipeline
 
                     ExceptionHandled = false;
 
-                    await LogEventAsync("Failed", cancellationToken).ConfigureAwait(false);
+                    LogEvent("Failed");
                     await RaiseEventAsync(_pipelineFailedType, cancellationToken, true).ConfigureAwait(false);
                     await _pipelineOptions.PipelineFailed.InvokeAsync(_pipelineEventArgs, cancellationToken);
 
@@ -266,7 +268,7 @@ public class Pipeline : IPipeline
                         continue;
                     }
 
-                    await LogEventAsync("Aborted", cancellationToken).ConfigureAwait(false);
+                    LogEvent("Aborted");
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
                     await _pipelineOptions.PipelineAborted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
@@ -276,7 +278,7 @@ public class Pipeline : IPipeline
 
             EventType = null;
 
-            await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
+            LogEvent("Completed");
             await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             DisposeTransactionScope();
@@ -284,13 +286,13 @@ public class Pipeline : IPipeline
 
         StageName = string.Empty;
 
-        await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
+        LogEvent("Completed");
         await _pipelineOptions.PipelineCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
         return true;
     }
 
-    private Pipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider)
+    private Pipeline AddObserver(IPipelineObserverProvider pipelineObserverProvider, ObserverPosition position)
     {
         var observerType = pipelineObserverProvider.GetObserverType();
         var observer = pipelineObserverProvider.GetObserverInstance();
@@ -307,7 +309,7 @@ public class Pipeline : IPipeline
 
             if (!_observerMethodInvokers.TryGetValue(pipelineEventType, out _))
             {
-                _observerMethodInvokers.Add(pipelineEventType, new());
+                _observerMethodInvokers.Add(pipelineEventType, []);
             }
 
             var genericType = PipelineObserverType.MakeGenericType(pipelineEventType);
@@ -318,7 +320,7 @@ public class Pipeline : IPipeline
                 throw new PipelineException(string.Format(Resources.ObserverMethodNotFoundException, observerType.FullName, eventInterface.FullName));
             }
 
-            _observerMethodInvokers[pipelineEventType].Add(new(pipelineObserverProvider, methodInfo));
+            _observerMethodInvokers[pipelineEventType].Add(new(pipelineObserverProvider, methodInfo, position));
         }
 
         return this;
@@ -330,11 +332,9 @@ public class Pipeline : IPipeline
         TransactionScope = null;
     }
 
-    private async Task LogEventAsync(string eventState, CancellationToken cancellationToken)
+    private void LogEvent(string eventState)
     {
         LogMessage.PipelineEvent(_logger, $"{EventType?.FullName ?? "(no event)"}{(string.IsNullOrWhiteSpace(eventState) ? string.Empty : $"/{eventState}")}", GetType().FullName ?? "(no name)", !string.IsNullOrWhiteSpace(StageName) ? StageName : "(no stage)");
-
-        await Task.CompletedTask;
     }
 
     private async Task RaiseEventAsync(Type eventType, CancellationToken cancellationToken, bool ignoreAbort)
@@ -352,7 +352,7 @@ public class Pipeline : IPipeline
 
         try
         {
-            await LogEventAsync("Starting", cancellationToken).ConfigureAwait(false);
+            LogEvent("Starting");
             await _pipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
             PipelineContextConstructorInvoker? pipelineContextConstructor;
@@ -444,8 +444,40 @@ public class Pipeline : IPipeline
         }
         finally
         {
-            await LogEventAsync("Completed", cancellationToken).ConfigureAwait(false);
+            LogEvent("Completed");
             await _pipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private void ReorderObservers()
+    {
+        foreach (var key in _observerMethodInvokers.Keys.ToList())
+        {
+            var list = _observerMethodInvokers[key];
+
+            if (list.Count <= 1)
+            {
+                continue;
+            }
+
+            _observerMethodInvokers[key] = list
+                .OrderBy(item => (int)item.Position)
+                .ToList();
+        }
+
+        foreach (var key in _delegates.Keys.ToList())
+        {
+            var list = _delegates[key];
+
+            if (list.Count <= 1)
+            {
+                continue;
+            }
+
+            _delegates[key] = list
+                .OrderBy(item => (int)item.Position)
+                .ToList();
+        }
+    }
+
 }
