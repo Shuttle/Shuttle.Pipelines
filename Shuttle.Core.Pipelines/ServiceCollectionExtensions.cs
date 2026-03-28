@@ -11,7 +11,7 @@ public static class ServiceCollectionExtensions
         {
             Guard.AgainstNull(services);
 
-            services.AddOptions<PipelineOptions>();
+            services.AddOptions();
 
             var pipelineProcessingBuilder = new PipelineBuilder(services);
 
