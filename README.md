@@ -10,7 +10,7 @@ dotnet add package Shuttle.Core.Pipelines
 
 ## Configuration
 
-In order to more easily make use of pipelines an implementation of the `IPipelineFactory` should be used. The following will register the `PipelineFactory` implementation:
+In order to make use of pipelines, you can add them to your `IServiceCollection`:
 
 ```c#
 services.AddPipelines(builder => {
@@ -18,9 +18,12 @@ services.AddPipelines(builder => {
 });
 ```
 
-This will register the `IPipelineFactory` as `Scoped` and, using the builder, add all `IPipeline` implementations as `Transient` and all `IPipelineObserver` implementations as `Scoped`.
+This will register the implementations found in the assembly:
 
-Since pipelines are quite frequently extended by adding observers, the recommended pattern is to make use of an `IHostedService` implementation that accepts the `PipelineOptions` dependency:
+- All `IPipeline` implementations that have a matching interface (e.g. `IMyPipeline` for `MyPipeline`) are registered as `Scoped` using the interface. Otherwise they are registered as `Transient`.
+- All `IPipelineObserver` implementations that have a matching interface are registered as `Scoped`. If an observer does not have a matching interface, a configuration exception is thrown.
+
+Pipelines can be extended by adding observers dynamically. The recommended pattern is to make use of an `IHostedService` implementation that binds to the `PipelineStarting` event on the `PipelineOptions` dependency:
 
 ```c#
 public class CustomHostedService : IHostedService
@@ -32,10 +35,10 @@ public class CustomHostedService : IHostedService
     {
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
 
-        _pipelineOptions.PipelineCreated += PipelineCreated;
+        _pipelineOptions.PipelineStarting += PipelineStarting;
     }
 
-    private async Task PipelineCreated(PipelineEventArgs e, CancellationToken cancellationToken)
+    private async Task PipelineStarting(PipelineEventArgs e, CancellationToken cancellationToken)
     {
         if (e.Pipeline.GetType() != _pipelineType)
         {
@@ -54,7 +57,7 @@ public class CustomHostedService : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _pipelineOptions.PipelineCreated -= PipelineCreated;
+        _pipelineOptions.PipelineStarting -= PipelineStarting;
 
         await Task.CompletedTask;
     }
@@ -75,7 +78,7 @@ public static class ServiceCollectionExtensions
 }
 ```
 
-The above is a rather naive example but it should give you an idea of how to extend pipelines using the `IPipelineFactory` and `IHostedService` implementations.
+The above is a rather naive example but it should give you an idea of how to extend pipelines dynamically using the `IHostedService` implementation.
 
 ## Overview
 
@@ -90,7 +93,7 @@ var list = new List<string> {"item-1"};
 state.Add(list); // key = System.Collections.Generic.List`1[[System.String...]]
 state.Add("my-key", "my-key-value");
 
-Console.WriteLine(state.Get<List<string>>()[0]);
+Console.WriteLine(state.Get<List<string>>()?[0]);
 Console.Write(state.Get<string>("my-key"));
 ```
 
@@ -169,10 +172,10 @@ public class CharacterPipelineObserver :
 }
 ```
 
-Next we will define the pipeline itself:
+Next we will resolve the pipeline:
 
 ``` c#
-var pipeline = new Pipeline(pipelineDependencies); // Dependencies injected via DI in real app
+var pipeline = serviceProvider.GetRequiredService<CharacterPipeline>(); // Resolved via DI in real app
 
 pipeline.AddStage("process")
 	.WithEvent<OnAddCharacterA>()
@@ -183,7 +186,8 @@ pipeline.AddObserver(new CharacterPipelineObserver());
 pipeline.State.Add("value", "start");
 pipeline.State.Add("character", 'Z');
 
-await pipeline.ExecuteAsync();
+// ExecuteAsync returns false if the pipeline was aborted, and true if all events were processed.
+var completed = await pipeline.ExecuteAsync();
 
 Console.WriteLine(pipeline.State.Get<string>("value")); // outputs start-A-Z
 ```
@@ -212,4 +216,26 @@ pipeline.GetStage("Process")
 // Add MyEvent after ExistingEvent
 pipeline.GetStage("Process")
     .AfterEvent<ExistingEvent>().Add<MyEvent>();
+```
+
+### Observer Positioning
+
+You can control when observers execute relative to each other by specifying an `ObserverPosition` when adding them:
+
+```c#
+pipeline.AddObserver(new CharacterPipelineObserver(), ObserverPosition.Before);
+```
+
+The available positions are `Anywhere` (default), `Before`, and `After`. Observers run in the order of their position group.
+
+### Delegate Observers
+
+For light-weight handlers where defining a full interface-implementing class is unnecessary, you can use strongly-typed delegates via the `AddObserver` method:
+
+```c#
+pipeline.AddObserver(async (IPipelineContext<OnAddCharacter> context, CancellationToken cancellationToken) => 
+{
+    // Handle the event
+    await Task.CompletedTask;
+});
 ```
