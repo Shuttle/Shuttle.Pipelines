@@ -28,20 +28,16 @@ public class AddPipelinesFixture
         };
 
         var provider = new ServiceCollection()
-            .AddPipelines(builder =>
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    options.PipelineAborted += handlerA;
-                });
+                options.PipelineAborted += handlerA;
             })
-            .AddPipelines(builder =>
+            .Services
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    options.PipelineAborted += handlerB;
-                });
+                options.PipelineAborted += handlerB;
             })
+            .Services
             .BuildServiceProvider();
 
         var options = provider.GetRequiredService<IOptions<PipelineOptions>>().Value;
@@ -66,20 +62,16 @@ public class AddPipelinesFixture
         };
 
         var provider = new ServiceCollection()
-            .AddPipelines(builder =>
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    options.PipelineAborted += handler;
-                });
+                options.PipelineAborted += handler;
             })
-            .AddPipelines(builder =>
+            .Services
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    options.PipelineAborted += handler;
-                });
+                options.PipelineAborted += handler;
             })
+            .Services
             .BuildServiceProvider();
 
         var options = provider.GetRequiredService<IOptions<PipelineOptions>>().Value;
@@ -93,20 +85,16 @@ public class AddPipelinesFixture
         AsyncEvent<PipelineEventArgs>? instanceFromFirstConfigure = null;
 
         var provider = new ServiceCollection()
-            .AddPipelines(builder =>
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    instanceFromFirstConfigure = options.PipelineAborted;
-                });
+                instanceFromFirstConfigure = options.PipelineAborted;
             })
-            .AddPipelines(builder =>
+            .Services
+            .AddPipelines(options =>
             {
-                builder.Configure(options =>
-                {
-                    Assert.That(options.PipelineAborted, Is.SameAs(instanceFromFirstConfigure));
-                });
+                Assert.That(options.PipelineAborted, Is.SameAs(instanceFromFirstConfigure));
             })
+            .Services
             .BuildServiceProvider();
 
         _ = provider.GetRequiredService<IOptions<PipelineOptions>>().Value;

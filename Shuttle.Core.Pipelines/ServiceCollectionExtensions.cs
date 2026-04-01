@@ -7,17 +7,17 @@ public static class ServiceCollectionExtensions
 {
     extension(IServiceCollection services)
     {
-        public IServiceCollection AddPipelines(Action<PipelineBuilder>? builder = null)
+        public PipelineBuilder AddPipelines(Action<PipelineOptions>? configureOptions = null)
         {
-            Guard.AgainstNull(services);
+            var builder = new PipelineBuilder(Guard.AgainstNull(services));
 
             services.AddOptions();
+            services.AddOptions<PipelineOptions>().Configure(options =>
+            {
+                configureOptions?.Invoke(options);
+            });
 
-            var pipelineProcessingBuilder = new PipelineBuilder(services);
-
-            builder?.Invoke(pipelineProcessingBuilder);
-
-            return services;
+            return builder;
         }
     }
 }

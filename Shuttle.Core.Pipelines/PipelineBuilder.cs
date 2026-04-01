@@ -8,12 +8,6 @@ namespace Shuttle.Core.Pipelines;
 
 public class PipelineBuilder(IServiceCollection services)
 {
-    public PipelineBuilder Configure(Action<PipelineOptions> configure)
-    {
-        Services.Configure(configure);
-        return this;
-    }
-
     public IServiceCollection Services { get; } = Guard.AgainstNull(services);
 
     public PipelineBuilder AddAssembly(Assembly assembly)
