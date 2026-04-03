@@ -10,11 +10,14 @@ public class PipelineBuilder(IServiceCollection services)
 {
     public IServiceCollection Services { get; } = Guard.AgainstNull(services);
 
-    public PipelineBuilder AddAssembly(Assembly assembly)
+    public PipelineBuilder AddPipelinesFrom(Assembly assembly)
     {
-        Guard.AgainstNull(assembly);
+        return AddPipelinesFrom([Guard.AgainstNull(assembly)]);
+    }
 
-        foreach (var type in assembly.GetTypesCastableToAsync<IPipeline>().GetAwaiter().GetResult())
+    public PipelineBuilder AddPipelinesFrom(Assembly[] assemblies)
+    {
+        foreach (var type in assemblies.SelectMany(assembly => assembly.FindTypesCastableTo<IPipeline>()))
         {
             if (type.IsInterface || type.IsAbstract)
             {
@@ -33,7 +36,7 @@ public class PipelineBuilder(IServiceCollection services)
             }
         }
 
-        foreach (var type in assembly.GetTypesCastableToAsync<IPipelineObserver>().GetAwaiter().GetResult())
+        foreach (var type in assemblies.SelectMany(assembly => assembly.FindTypesCastableTo<IPipelineObserver>()))
         {
             if (type.IsInterface || type.IsAbstract)
             {
