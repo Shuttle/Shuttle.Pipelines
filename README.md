@@ -278,14 +278,13 @@ pipeline.GetStage("Process")
 You can control when observers execute relative to each other for the **same event** by specifying an `ObserverPosition` when adding them:
 
 ```c#
-pipeline.AddObserver(new CharacterPipelineObserver(), ObserverPosition.Before);
+pipeline.AddObserver(new CharacterPipelineObserver(), ObserverPosition.End);
 ```
 
 The available positions are:
 
-- `Before`: Executes before the `Anywhere` group.
-- `Anywhere` (default): Executes after `Before` and before `After`.
-- `After`: Executes after the `Anywhere` group.
+- `Anywhere` (default): Observers are executed in the order they were registered.
+- `End`: Observers are executed after all observers with `Anywhere` position have been executed.
 
 Observers within the same group execute in the order they were registered.
 
