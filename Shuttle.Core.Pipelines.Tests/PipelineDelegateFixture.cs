@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -86,9 +85,8 @@ public class PipelineDelegateFixture
     private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
-        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
 
-        return new(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), serviceProvider ?? new Mock<IServiceProvider>().Object);
+        return new(pipelineOptions, serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]

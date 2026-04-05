@@ -13,6 +13,4 @@ public class PipelineOptions
     public AsyncEvent<PipelineEventArgs> StageStarting { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> EventCompleted { get; set; } = new();
     public AsyncEvent<PipelineEventArgs> EventStarting { get; set; } = new();
-    public AsyncEvent<PipelineEventArgs> TransactionScopeIgnored { get; set; } = new();
-    public AsyncEvent<TransactionScopeEventArgs> TransactionScopeStarting { get; set; } = new();
 }

@@ -1,11 +1,9 @@
 using System.Reflection;
-using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Shuttle.Core.Contract;
 using Shuttle.Core.Reflection;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Core.Pipelines;
 
@@ -15,9 +13,7 @@ public class Pipeline : IPipeline
     private static readonly Type PipelineContextType = typeof(IPipelineContext<>);
 
     private readonly Type _abortPipelineType = typeof(AbortPipeline);
-    private readonly Type _completeTransactionScopeType = typeof(CompleteTransactionScope);
     private readonly Dictionary<Type, List<ObserverDelegate>> _delegates = new();
-    private readonly Type _disposeTransactionScopeType = typeof(DisposeTransactionScope);
 
     private readonly ILogger<Pipeline> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -29,20 +25,13 @@ public class Pipeline : IPipeline
     private readonly PipelineOptions _pipelineOptions;
 
     private readonly string _raisingPipelineEvent = Resources.VerboseRaisingPipelineEvent;
-    private readonly Type _startTransactionScopeType = typeof(StartTransactionScope);
-    private readonly ITransactionScopeFactory _transactionScopeFactory;
-    private readonly TransactionScopeOptions _transactionScopeOptions;
-
-    public ITransactionScope? TransactionScope { get; private set; }
 
     protected List<IPipelineStage> Stages = [];
 
-    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IOptions<TransactionScopeOptions> transactionScopeOptions, ITransactionScopeFactory transactionScopeFactory, IServiceProvider serviceProvider, ILogger<Pipeline>? logger = null)
+    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider, ILogger<Pipeline>? logger = null)
     {
         _logger = logger ?? NullLogger<Pipeline>.Instance;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
-        _transactionScopeOptions = Guard.AgainstNull(Guard.AgainstNull(transactionScopeOptions).Value);
-        _transactionScopeFactory = Guard.AgainstNull(transactionScopeFactory);
         ServiceProvider = Guard.AgainstNull(serviceProvider);
 
         _pipelineEventArgs = new(this);
@@ -149,32 +138,6 @@ public class Pipeline : IPipeline
         {
             StageName = stage.Name;
 
-            if (stage.RequiresTransactionScope)
-            {
-                if (TransactionScope != null)
-                {
-                    throw new PipelineException(Resources.TransactionScopeAlreadyStartedException);
-                }
-
-                if (Transaction.Current == null)
-                {
-                    EventType = _startTransactionScopeType;
-
-                    var transactionScopeEventArgs = new TransactionScopeEventArgs(this, _transactionScopeOptions.IsolationLevel, _transactionScopeOptions.Timeout);
-
-                    LogEvent("Starting");
-                    await _pipelineOptions.TransactionScopeStarting.InvokeAsync(transactionScopeEventArgs, cancellationToken);
-
-                    // This cannot be async as the transaction scope will not be created within this execution context.
-                    TransactionScope = _transactionScopeFactory.Create(transactionScopeEventArgs.IsolationLevel, transactionScopeEventArgs.Timeout);
-                }
-                else
-                {
-                    LogEvent("Ignored");
-                    await _pipelineOptions.TransactionScopeIgnored.InvokeAsync(_pipelineEventArgs, cancellationToken);
-                }
-            }
-
             LogEvent("Starting");
             await _pipelineOptions.StageStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
 
@@ -186,28 +149,6 @@ public class Pipeline : IPipeline
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    if (eventType == _completeTransactionScopeType && TransactionScope != null)
-                    {
-                        await _pipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-
-                        TransactionScope.Complete();
-                        TransactionScope.Dispose();
-                        TransactionScope = null;
-
-                        await _pipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-
-                        continue;
-                    }
-
-                    if (eventType == _disposeTransactionScopeType && TransactionScope != null)
-                    {
-                        await _pipelineOptions.EventStarting.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-                        DisposeTransactionScope();
-                        await _pipelineOptions.EventCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-
-                        continue;
-                    }
-
                     await RaiseEventAsync(eventType, cancellationToken, false).ConfigureAwait(false);
 
                     if (!Aborted)
@@ -215,18 +156,10 @@ public class Pipeline : IPipeline
                         continue;
                     }
 
-                    DisposeTransactionScope();
-
                     LogEvent("Aborted");
                     await RaiseEventAsync(_abortPipelineType, cancellationToken, true).ConfigureAwait(false);
 
                     return false;
-                }
-                catch (OperationCanceledException)
-                {
-                    DisposeTransactionScope();
-
-                    throw;
                 }
                 catch (RecursiveException rex)
                 {
@@ -246,10 +179,8 @@ public class Pipeline : IPipeline
                         // give up
                     }
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    DisposeTransactionScope();
-
                     Exception = ex.TrimLeading<TargetInvocationException>();
 
                     ExceptionHandled = false;
@@ -280,8 +211,6 @@ public class Pipeline : IPipeline
 
             LogEvent("Completed");
             await _pipelineOptions.StageCompleted.InvokeAsync(_pipelineEventArgs, cancellationToken).ConfigureAwait(false);
-
-            DisposeTransactionScope();
         }
 
         StageName = string.Empty;
@@ -324,12 +253,6 @@ public class Pipeline : IPipeline
         }
 
         return this;
-    }
-
-    private void DisposeTransactionScope()
-    {
-        TransactionScope?.Dispose();
-        TransactionScope = null;
     }
 
     private void LogEvent(string eventState)

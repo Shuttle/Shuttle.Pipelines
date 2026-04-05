@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;
-using Shuttle.Core.TransactionScope;
 
 namespace Shuttle.Core.Pipelines.Tests;
 
@@ -12,9 +11,8 @@ public class PipelineObserverFixture
     private static Pipeline GetPipeline(ServiceProvider? serviceProvider = null)
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
-        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
 
-        return new(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), serviceProvider ?? new Mock<IServiceProvider>().Object);
+        return new(pipelineOptions, serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]
@@ -169,9 +167,8 @@ public class PipelineObserverFixture
     public void Should_be_able_to_use_scoped_ambient_context_state_async()
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
-        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
@@ -185,9 +182,8 @@ public class PipelineObserverFixture
     public void Should_be_not_able_to_use_ambient_context_state_without_scope_async()
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
-        var transactionScopeOptions = Options.Create(new TransactionScopeOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(pipelineOptions, transactionScopeOptions, new TransactionScopeFactory(transactionScopeOptions), new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
