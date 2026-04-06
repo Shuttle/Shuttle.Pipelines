@@ -2,10 +2,10 @@ namespace Shuttle.Core.Pipelines;
 
 public interface IState
 {
-    void Add(string key, object? value);
-    void Clear();
+    IState Add(string key, object? value);
+    IState Clear();
     bool Contains(string key);
     object? Get(string key);
     bool Remove(string key);
-    void Replace(string key, object? value);
+    IState Replace(string key, object? value);
 }

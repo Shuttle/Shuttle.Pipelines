@@ -11,11 +11,12 @@ public static class ServiceCollectionExtensions
         {
             var builder = new PipelineBuilder(Guard.AgainstNull(services));
 
-            services.AddOptions();
             services.AddOptions<PipelineOptions>().Configure(options =>
             {
                 configureOptions?.Invoke(options);
             });
+
+            services.AddScoped<IPipelineState, PipelineState>();
 
             return builder;
         }

@@ -6,22 +6,26 @@ public class State : IState
 {
     private readonly Dictionary<string, object?> _state = new();
 
-    public void Clear()
+    public IState Clear()
     {
         _state.Clear();
+        return this;
     }
 
-    public void Add(string key, object? value)
+    public IState Add(string key, object? value)
     {
         _state.Add(Guard.AgainstNull(key), value);
+        return this;
     }
 
-    public void Replace(string key, object? value)
+    public IState Replace(string key, object? value)
     {
         Guard.AgainstNull(key);
 
         _state.Remove(key);
         _state.Add(key, value);
+
+        return this;
     }
 
     public object? Get(string key)
