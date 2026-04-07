@@ -86,7 +86,7 @@ public class PipelineDelegateFixture
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
 
-        return new(pipelineOptions, new PipelineState(), serviceProvider ?? new Mock<IServiceProvider>().Object);
+        return new(pipelineOptions, serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public class PipelineDelegateFixture
 
         pipeline.MapObservers();
 
-        await pipeline.ExecuteAsync(CancellationToken.None);
+        await pipeline.ExecuteAsync();
 
         Assert.That(pipeline.State.Get<string>("CallSequence"), Is.EqualTo("321"));
     }

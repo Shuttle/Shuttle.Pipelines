@@ -9,7 +9,6 @@ namespace Shuttle.Core.Pipelines;
 
 public class Pipeline : IPipeline
 {
-    private readonly IPipelineState _pipelineState;
     private static readonly Type PipelineObserverType = typeof(IPipelineObserver<>);
     private static readonly Type PipelineContextType = typeof(IPipelineContext<>);
 
@@ -29,9 +28,8 @@ public class Pipeline : IPipeline
 
     protected List<IPipelineStage> Stages = [];
 
-    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IPipelineState pipelineState, IServiceProvider serviceProvider, ILogger<Pipeline>? logger = null)
+    public Pipeline(IOptions<PipelineOptions> pipelineOptions, IServiceProvider serviceProvider, ILogger<Pipeline>? logger = null)
     {
-        _pipelineState = Guard.AgainstNull(pipelineState);
         _logger = logger ?? NullLogger<Pipeline>.Instance;
         _pipelineOptions = Guard.AgainstNull(Guard.AgainstNull(pipelineOptions).Value);
         ServiceProvider = Guard.AgainstNull(serviceProvider);
@@ -48,7 +46,7 @@ public class Pipeline : IPipeline
     public string StageName { get; private set; } = string.Empty;
     public Type? EventType { get; private set; }
 
-    public IState State => _pipelineState.State;
+    public IState State { get; } = new State();
 
     public IPipeline AddObserver(IPipelineObserver pipelineObserver, ObserverPosition position = ObserverPosition.Anywhere)
     {

@@ -12,7 +12,7 @@ public class PipelineObserverFixture
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
 
-        return new(pipelineOptions, new PipelineState(), serviceProvider ?? new Mock<IServiceProvider>().Object);
+        return new(pipelineOptions, serviceProvider ?? new Mock<IServiceProvider>().Object);
     }
 
     [Test]
@@ -168,7 +168,7 @@ public class PipelineObserverFixture
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(pipelineOptions, new PipelineState(), new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {
@@ -183,7 +183,7 @@ public class PipelineObserverFixture
     {
         var pipelineOptions = Options.Create(new PipelineOptions());
         var ambientDataService = new AmbientDataService();
-        var pipeline = new AmbientDataPipeline(pipelineOptions, new PipelineState(), new Mock<IServiceProvider>().Object, ambientDataService);
+        var pipeline = new AmbientDataPipeline(pipelineOptions, new Mock<IServiceProvider>().Object, ambientDataService);
 
         Assert.That(async () =>
         {

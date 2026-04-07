@@ -16,8 +16,6 @@ public static class ServiceCollectionExtensions
                 configureOptions?.Invoke(options);
             });
 
-            services.AddScoped<IPipelineState, PipelineState>();
-
             return builder;
         }
     }
