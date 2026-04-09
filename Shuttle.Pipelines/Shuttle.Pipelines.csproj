@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
+    <PackageReference Include="Shuttle.Contract" Version="21.0.1-rc3" />
+    <PackageReference Include="Shuttle.Reflection" Version="21.0.1-rc3" />
+    <PackageReference Include="Shuttle.Extensions.Options" Version="21.0.1-rc3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Description>Observable event-based pipelines based broadly on pipes and filters.</Description>
+    <Version>21.0.1-rc3</Version>
+    <PackageProjectUrl>https://github.com/shuttle/Shuttle.Pipelines</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/shuttle/Shuttle.Pipelines.git</RepositoryUrl>
+    <PackageTags>shuttle</PackageTags>
+    <Authors>Eben Roux</Authors>
+    <Company>Shuttle</Company>
+    <Copyright>Copyright (c) 2025, Eben Roux</Copyright>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\.media\logo.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <Target Name="CopyNuGetPackage" AfterTargets="Pack" Condition="'$(NUGET_PACKAGE_FOLDER)' != ''">
+    <Message Text="Removing cached NuGet package '$(USERPROFILE)\.nuget\packages\$(AssemblyName)\$(Version)'..." Importance="high" />
+    <RemoveDir Directories="$(USERPROFILE)\.nuget\packages\$(AssemblyName)\$(Version)" />
+    <Message Text="Copying NuGet package to '$(NUGET_PACKAGE_FOLDER)'..." Importance="high" />
+    <Copy SourceFiles="bin\$(Configuration)\$(AssemblyName).$(Version).nupkg" DestinationFolder="$(NUGET_PACKAGE_FOLDER)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
