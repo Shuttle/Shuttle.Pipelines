@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="DuplicatePipelineInstanceException" xml:space="preserve">
+    <value>The IComponentResolver implementation returned the same pipeline instance of type '{0}'.  Since pipelines are not stateless that cannot be shared.  Please register the pipeline types as transient.</value>
+    <comment>0 = pipeline type</comment>
+  </data>
+  <data name="ExecutionScopeFactoryAlreadySetException" xml:space="preserve">
+    <value>An `ExecutionScopeFactory` has already been set.</value>
+  </data>
+  <data name="NullPipelineException" xml:space="preserve">
+    <value>The IComponentResolver implementation returned null for pipeline of type '{0}'.</value>
+    <comment>0 = full type name of pipeline requested</comment>
+  </data>
+  <data name="ObserverInterfaceMissingException" xml:space="preserve">
+    <value>Observer with type name '{0}' does not have an interface with name 'I{0}'.</value>
+    <comment>0 = observer type name</comment>
+  </data>
+  <data name="PipelineStageEventNotRegistered" xml:space="preserve">
+    <value>Pipeline stage '{0}' has no event of type '{1}'.</value>
+    <comment>0 = pipeline stage name, 1 = unknown event type name</comment>
+  </data>
+  <data name="PipelineStageNotFound" xml:space="preserve">
+    <value>There is no pipeline stage with a name of '{0}'.</value>
+    <comment>0 = unknown stage name</comment>
+  </data>
+  <data name="StageScopeFactoryAlreadySetException" xml:space="preserve">
+    <value>A `StageScopeFactory` has already been set.</value>
+  </data>
+  <data name="UnhandledPipelineException" xml:space="preserve">
+    <value>Unhandled exception during event '{0}': {1}</value>
+    <comment>0 = event name, 1 = exception message</comment>
+  </data>
+  <data name="VerboseRaisingPipelineEvent" xml:space="preserve">
+    <value>Raising pipeline event '{0}' in stage '{1}' for observer '{2}'.</value>
+    <comment>0 = pipeline event name, 1 = pipeline stage name, 2 = observer name</comment>
+  </data>
+  <data name="ObserverMethodNotFoundException" xml:space="preserve">
+    <value>Method 'ExecuteAsync()' could not be found</value>
+    <comment>0 = observer type name</comment>
+  </data>
+  <data name="PipelineEventActivationException" xml:space="preserve">
+    <value>Could not create an instance of type '{0}' that implements 'IPipelineEvent'.</value>
+    <comment>0 = type name</comment>
+  </data>
+  <data name="PipelineStageEventAlreadyRegisteredException" xml:space="preserve">
+    <value>Pipeline stage named '{0}' already has an event with name '{1}'.</value>
+    <comment>0 = stage name, 1 = event name</comment>
+  </data>
+  <data name="ContextConstructorException" xml:space="preserve">
+    <value>Could not find the constructor for type '{0}'.</value>
+    <comment>0 = full name of context type</comment>
+  </data>
+  <data name="AsyncDelegateRequiredException" xml:space="preserve">
+    <value>Mapped delegates have to be async.</value>
+  </data>
+  <data name="PipelineDelegateTypeException" xml:space="preserve">
+    <value>The delegate must contain a parameter of type `IPipelineContext&lt;T&gt;`.</value>
+  </data>
+  <data name="MissingPipelineObserverException" xml:space="preserve">
+    <value>Could not resolve pipeline observer type '{0}'.  Please ensure that it has been registered in the ServiceCollection.</value>
+  </data>
+  <data name="ExceptionHandlerRecursiveException" xml:space="preserve">
+    <value>[FATAL] : An exception occurred while raising the 'OnPipelineException' event.  Please ensure that exceptions do not bubble up in exception handlers.</value>
+    <comment>0 = </comment>
+  </data>
+  <data name="TransactionScopeAlreadyStartedException" xml:space="preserve">
+    <value>A transaction scope has already been started.</value>
+  </data>
+</root>
