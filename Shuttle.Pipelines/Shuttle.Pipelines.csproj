@@ -11,9 +11,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.3" />
-    <PackageReference Include="Shuttle.Contract" Version="21.0.1-rc3" />
-    <PackageReference Include="Shuttle.Reflection" Version="21.0.1-rc3" />
-    <PackageReference Include="Shuttle.Extensions.Options" Version="21.0.1-rc3" />
+    <PackageReference Include="Shuttle.Contract" Version="21.0.1" />
+    <PackageReference Include="Shuttle.Reflection" Version="21.0.1" />
+    <PackageReference Include="Shuttle.Extensions.Options" Version="21.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,7 +33,7 @@
 
   <PropertyGroup>
     <Description>Observable event-based pipelines based broadly on pipes and filters.</Description>
-    <Version>21.0.1-rc3</Version>
+    <Version>21.0.1</Version>
     <PackageProjectUrl>https://github.com/shuttle/Shuttle.Pipelines</PackageProjectUrl>
     <RepositoryUrl>https://github.com/shuttle/Shuttle.Pipelines.git</RepositoryUrl>
     <PackageTags>shuttle</PackageTags>
