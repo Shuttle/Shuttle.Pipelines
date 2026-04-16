@@ -22,10 +22,15 @@ You can also add multiple assemblies:
 services.AddPipelines().AddPipelinesFrom(new[] { assembly1, assembly2 });
 ```
 
-This will register the implementations found in the assembly:
+This will register the implementations found in the assembly.  All `IPipeline` implementations that have a matching interface (e.g. `IMyPipeline` for `MyPipeline`) are registered as `Scoped` against the matching interface (e.g. `IMyPipeline`); else only the type is registered (e.g. `MyPipeline)`).
 
-- All `IPipeline` implementations that have a matching interface (e.g. `IMyPipeline` for `MyPipeline`) are registered as `Scoped` using the interface. Otherwise they are registered as `Transient`.
-- All `IPipelineObserver` implementations that have a matching interface are registered as `Scoped`. If an observer does not have a matching interface, a configuration exception is thrown.
+You can also add observers from assemblies:
+
+```c#
+services.AddPipelines().AddObserversFrom(assembly);
+```
+
+Observers require a matching interface, e.g. `IMyObserver` for the `MyObserver` type.  If there is no matching interface an exception is thrown.  Observers are registered as `Scoped`.
 
 ### Lifecycle Events
 
@@ -53,8 +58,6 @@ Available events in `PipelineOptions`:
 - `StageCompleted`: Raised after a stage completes.
 - `EventStarting`: Raised before an event is raised.
 - `EventCompleted`: Raised after an event has been processed.
-- `TransactionScopeStarting`: Raised before a transaction scope is created.
-- `TransactionScopeIgnored`: Raised when a transaction scope is requested but one already exists.
 
 Pipelines can be extended by adding observers dynamically. The recommended pattern is to make use of an `IHostedService` implementation that binds to the `PipelineStarting` event on the `PipelineOptions` dependency:
 
@@ -149,7 +152,24 @@ state.Remove("my-key");
 state.Remove<List<string>>();
 ```
 
-The `Pipeline` class has a `AddStage` method that will return a `PipelineStage` instance. The `PipelineStage` instance has a `WithEvent` method that will return a `PipelineStage` instance. This allows for a fluent interface to register events for a pipeline:
+The `Pipeline` class has a `AddStage` method that will return an `IPipelineStage` instance. The `IPipelineStage` instance has a `WithEvent` method that will return an `IPipelineStage` instance. This allows for a fluent interface to register events for a pipeline:
+
+### `IPipelineStage`
+
+The `IPipelineStage` interface represents a stage within a pipeline and provides methods for managing events:
+
+```c#
+public interface IPipelineStage
+{
+    IEnumerable<Type> Events { get; }
+    string Name { get; }
+    IAddEventAfter AfterEvent<TEvent>() where TEvent : class;
+    IAddEventBefore BeforeEvent<TEvent>() where TEvent : class;
+    IPipelineStage WithEvent<TEvent>() where TEvent : class;
+}
+```
+
+The `Events` property provides access to the registered event types for the stage. The `AfterEvent<TEvent>()` and `BeforeEvent<TEvent>()` methods return `IAddEventAfter` and `IAddEventBefore` respectively, which both have an `Add<T>()` method to insert a new event relative to an existing one.
 
 ### `IPipelineObserver<TPipelineEvent>`
 
@@ -248,16 +268,6 @@ Console.WriteLine(pipeline.State.Get<string>("value")); // outputs start-A-Z
 ```
 
 ## Advanced Features
-
-### `ITransactionScope`
-
-Pipelines support `ITransactionScope` which can be started at the beginning of a stage. This ensures all observers within the stage execute under the same transaction context.
-
-```c#
-pipeline.AddStage("DatabaseOperation")
-    .WithEvent<OnOperation>()
-    .WithTransactionScope(); // Starts a transaction scope for this stage
-```
 
 ### Event Ordering
 

@@ -32,10 +32,20 @@ public class PipelineBuilder(IServiceCollection services)
             }
             else
             {
-                Services.TryAddTransient(type);
+                Services.TryAddScoped(type);
             }
         }
 
+        return this;
+    }
+
+    public PipelineBuilder AddObserversFrom(Assembly assembly)
+    {
+        return AddObserversFrom([Guard.AgainstNull(assembly)]);
+    }
+
+    public PipelineBuilder AddObserversFrom(Assembly[] assemblies)
+    {
         foreach (var type in assemblies.SelectMany(assembly => assembly.FindTypesCastableTo<IPipelineObserver>()))
         {
             if (type.IsInterface || type.IsAbstract)

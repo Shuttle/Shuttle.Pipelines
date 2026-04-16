@@ -33,7 +33,7 @@
 
   <PropertyGroup>
     <Description>Observable event-based pipelines based broadly on pipes and filters.</Description>
-    <Version>21.0.1</Version>
+    <Version>21.0.2</Version>
     <PackageProjectUrl>https://github.com/shuttle/Shuttle.Pipelines</PackageProjectUrl>
     <RepositoryUrl>https://github.com/shuttle/Shuttle.Pipelines.git</RepositoryUrl>
     <PackageTags>shuttle</PackageTags>
