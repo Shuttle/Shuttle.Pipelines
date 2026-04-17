@@ -1,11 +1,11 @@
-# Shuttle.Core.Pipelines
+# Shuttle.Pipelines
 
 Observable event-based pipelines based broadly on pipes and filters.
 
 ## Installation
 
 ```bash
-dotnet add package Shuttle.Core.Pipelines
+dotnet add package Shuttle.Pipelines
 ```
 
 ## Configuration
